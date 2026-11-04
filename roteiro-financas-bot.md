@@ -28,7 +28,7 @@ Para o estudo, o projeto deve exercitar o que o EBX cobra: **interfaces, heranç
 | Build | Maven |
 | Telegram | TelegramBots v7+ (long polling). Fixar a versão: a API mudou muito da v6 para a v7 |
 | IA | SDK oficial da Anthropic para Java, com modelo Haiku |
-| Banco | SQLite via JDBC |
+| Banco | PostgreSQL no Supabase (nuvem, plano free), via JDBC |
 | JSON | Jackson |
 | Testes | JUnit 5 desde a Etapa 2 |
 | Onde roda | bspnode (Oracle), em container |
@@ -37,6 +37,9 @@ Variáveis de ambiente:
 - `TELEGRAM_BOT_TOKEN`
 - `ANTHROPIC_API_KEY`
 - `TELEGRAM_ADMIN_CHAT_ID`: o meu chat ID, o único que aprova usuários novos
+- `DATABASE_URL` (ou URL, usuário e senha separados): conexão com o Supabase
+
+Em desenvolvimento ficam num `.env`, que está no `.gitignore`.
 
 > O EBX do treino de Developer (TEB801) roda em Java 8: lá não existem `record`, `var` nem text blocks.
 
@@ -56,13 +59,13 @@ organizador-financeiro/
     ├── ai/tools/                        // interface Tool + uma classe por tool
     ├── domain/                          // records e enums do domínio
     ├── domain/CalculadoraDeFatura.java  // regra de fatura e parcelas, sem banco
-    └── repo/                            // interfaces de repositório + implementação SQLite
+    └── repo/                            // interfaces de repositório + implementação Postgres
 ```
 
 Ideias de OO que guiam a estrutura:
 - **`Tool` é uma interface** (`nome()`, `schema()`, `executar(...)`). O `ClaudeService` guarda um `Map<String, Tool>` e despacha pelo nome, sem `if`/`switch`.
 - **Comandos** seguem a mesma ideia: um `Map<String, Comando>`.
-- **Repositórios são interfaces**, com uma implementação SQLite e uma em memória para os testes.
+- **Repositórios são interfaces**, com uma implementação Postgres e uma em memória para os testes rápidos.
 - **Estado da conversa** segue o padrão State: cada estado é uma classe que decide o que fazer com a mensagem que chega.
 
 ---
@@ -81,7 +84,7 @@ Telegram ──► FinancasBot ──► usuário aprovado? ── não ──�
                      │                         ▲               │
                      ▼                         │        tool_use: registrar_gasto
                  repositórios                  │               ▼
-                     │                         └──── Tool ──► validação ──► repositórios ──► SQLite
+                     │                         └──── Tool ──► validação ──► repositórios ──► Postgres
                      ▼
 FinancasBot ──► Telegram: "Anotado: R$ 5,50 no Nubank (Lazer), fatura de novembro"
 ```
@@ -149,7 +152,7 @@ Exemplo de dezembro de 2026: −salário curto e +13º como ajustes de renda, e 
 ### Tipos Java que aparecem
 
 - `BigDecimal` para dinheiro, sempre com `RoundingMode` na divisão.
-- `LocalDate` para datas, `YearMonth` para o mês da fatura (no SQLite, texto `"2026-12"`).
+- `LocalDate` para datas, `YearMonth` para o mês da fatura (no banco, `DATE` com o dia 1 ou texto `"2026-12"`: decidir no desenho das tabelas).
 - Fuso fixo `America/Sao_Paulo` no código: o bspnode fica em Londres.
 - Enums gravados como texto (`name()`), nunca como número (`ordinal()`), com `CHECK` no banco.
 
@@ -253,8 +256,10 @@ Consultas em linguagem livre ("quanto gastei de iFood em outubro?"). As consulta
 - **Pronto quando:** os testes passam para: compra antes, no dia e depois do fechamento; vencimento no mês seguinte ao fechamento; virada de ano; fechamento dia 30/31 em fevereiro; parcelamento com centavo sobrando; Pix numa parcela só.
 
 ### Etapa 3 — Banco
-- **Meta:** as seis tabelas e os repositórios, como interfaces com implementação SQLite.
-- **Conceitos:** JDBC, `PreparedStatement`, try-with-resources, chaves estrangeiras, `CHECK`, unicidade, `INSERT OR IGNORE`, `SUM` com mês vazio, transação (compra + parcelas gravam juntas ou nada grava).
+- **Meta:** as seis tabelas no Supabase e os repositórios, como interfaces com implementação Postgres e implementação em memória.
+- **Antes de começar:** criar o projeto no Supabase e confirmar como a máquina conecta: direto (IPv6) ou pelo pooler (IPv4). Vale para o WSL agora e para o bspnode na Etapa 8.
+- **Conceitos:** JDBC e driver do PostgreSQL, `PreparedStatement`, try-with-resources, `NUMERIC` para dinheiro, `DATE`, chaves estrangeiras, `CHECK`, unicidade, `INSERT ... ON CONFLICT DO NOTHING`, `SUM` com mês vazio, transação (compra + parcelas gravam juntas ou nada grava).
+- **Testes:** a lógica testa contra a implementação em memória. Testar a implementação Postgres exige um banco de verdade (Testcontainers ou um projeto de teste): decidir aqui.
 - **Pronto quando:** testes salvam e leem compras com parcelas, e gerar as recorrências duas vezes dá o mesmo resultado.
 
 ### Etapa 4 — Usuários, comandos e estado da conversa (sem IA)
@@ -280,8 +285,9 @@ Consultas em linguagem livre ("quanto gastei de iFood em outubro?"). As consulta
 
 ### Etapa 8 — Robustez e deploy no bspnode
 - **Meta:** erros não derrubam o bot, e ele roda 24/7 no bspnode.
-- **Conceitos:** logging (SLF4J), falhas e timeouts da API, Docker, limite de heap (`-Xmx`) para não competir com a coleta do mazetick.
-- **Pronto quando:** a API do Claude fora do ar não derruba o bot (os comandos continuam funcionando) e ele sobe sozinho depois de um restart da máquina.
+- **Conceitos:** logging (SLF4J), falhas e timeouts da API e do banco, pool de conexões, Docker, limite de heap (`-Xmx`) para não competir com a coleta do mazetick.
+- **Cuidado com o Supabase free:** o projeto é pausado depois de uma semana sem atividade.
+- **Pronto quando:** a API do Claude fora do ar não derruba o bot (os comandos continuam funcionando), o banco fora do ar gera uma resposta clara em vez de um erro mudo, e o bot sobe sozinho depois de um restart da máquina.
 
 ### Extras (depois)
 - Tool `consultar_gastos` para perguntas livres.
@@ -292,7 +298,8 @@ Consultas em linguagem livre ("quanto gastei de iFood em outubro?"). As consulta
 
 ## 10. Decisões já tomadas
 
-- Os dados ficam no SQLite, não no histórico de conversa. Todo dado vai para o banco.
+- Os dados ficam no banco (Postgres no Supabase), não no histórico de conversa. Todo dado vai para o banco.
+- Banco no Supabase na nuvem, não no Supabase self-hosted do mazeserver, que cai e é descartável.
 - O bot pode perguntar o que faltar. A garantia vem da validação no Java, não do prompt.
 - O bot tem usuários, mesmo que só eu use. Usuário novo nasce pendente.
 - Só o registro de gasto usa IA. Comandos e consultas são Java puro.
