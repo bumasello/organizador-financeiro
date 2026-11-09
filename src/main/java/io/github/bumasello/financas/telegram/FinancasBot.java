@@ -8,16 +8,36 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 public class FinancasBot implements LongPollingSingleThreadUpdateConsumer {
     private final TelegramClient telegramClient;
+    private final long chatIdPermitido;
 
-    public FinancasBot(TelegramClient client) {
+    public FinancasBot(TelegramClient client, long chatId) {
         this.telegramClient = client;
+        this.chatIdPermitido = chatId;
+
     }
 
     @Override
     public void consume(Update update) {
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             System.out.println(update.getMessage().getText());
             System.out.println(update.getMessage().getChatId());
+
+            if (update.getMessage().getChatId() != this.chatIdPermitido) {
+                // Ideal seria um print no console, mas deixei para eu ver funcionando
+                // sendMessage = new
+                // SendMessage(String.valueOf(update.getMessage().getChatId()),
+                // "ChatId não está na Whitelist");
+                //
+                // try {
+                // telegramClient.execute(sendMessage);
+                // } catch (TelegramApiException e) {
+                // e.printStackTrace();
+                // }
+                System.out.println("Chat Id ignorado: " + update.getMessage().getChatId());
+
+                return;
+            }
 
             SendMessage sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()),
                     update.getMessage().getText());
