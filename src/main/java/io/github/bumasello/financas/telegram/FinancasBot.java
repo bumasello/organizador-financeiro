@@ -1,12 +1,14 @@
 package io.github.bumasello.financas.telegram;
 
-import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
+import java.util.List;
+
+import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-public class FinancasBot implements LongPollingSingleThreadUpdateConsumer {
+public class FinancasBot implements LongPollingUpdateConsumer {
     private final TelegramClient telegramClient;
     private final long chatIdPermitido;
 
@@ -17,7 +19,13 @@ public class FinancasBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     @Override
-    public void consume(Update update) {
+    public void consume(List<Update> updates) {
+        for (Update update : updates) {
+            processar(update);
+        }
+    }
+
+    private void processar(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             System.out.println(update.getMessage().getText());
