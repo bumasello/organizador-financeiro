@@ -147,6 +147,54 @@ public class CalculadoraFaturaTest {
     }
 
     @Test
+    public void total10Parcelas() {
+        BigDecimal total = new BigDecimal("1800.00");
+        MeioPagamento x = new MeioPagamento("Nubank", TipoPagamento.CREDITO, 7, 14);
+        LocalDate dataCompra = LocalDate.of(2026, 10, 24);
+        List<Parcela> parcelas = CalculadoraFatura.parcelar(x, dataCompra, total, 10);
+
+        assertEquals(new Parcela(1, new BigDecimal("180.00"), YearMonth.of(2026, 11)), parcelas.get(0));
+        assertEquals(new Parcela(10, new BigDecimal("180.00"), YearMonth.of(2027, 8)),
+                parcelas.get(parcelas.size() - 1));
+
+        assertEquals(10, parcelas.size());
+    }
+
+    @Test
+    public void parcelasQuebradas() {
+        BigDecimal total = new BigDecimal("200.00");
+        MeioPagamento x = new MeioPagamento("Bradesco", TipoPagamento.CREDITO, 30, 10);
+        LocalDate dataCompra = LocalDate.of(2026, 11, 15);
+        List<Parcela> parcelasEsperadas = List.of(
+                new Parcela(1, new BigDecimal("66.67"), YearMonth.of(2026, 12)),
+                new Parcela(2, new BigDecimal("66.67"), YearMonth.of(2027, 1)),
+                new Parcela(3, new BigDecimal("66.66"), YearMonth.of(2027, 2)));
+
+        assertEquals(parcelasEsperadas, CalculadoraFatura.parcelar(x, dataCompra, total, 3));
+    }
+
+    @Test
+    public void parcelarComImediato() {
+        BigDecimal total = new BigDecimal("50.00");
+        MeioPagamento x = new MeioPagamento("Nubank", TipoPagamento.IMEDIATO, 0, 0);
+        LocalDate dataCompra = LocalDate.of(2026, 11, 3);
+        List<Parcela> parcelasEsperadas = List.of(
+                new Parcela(1, new BigDecimal("50.00"), YearMonth.of(2026, 11)));
+
+        assertEquals(parcelasEsperadas, CalculadoraFatura.parcelar(x, dataCompra, total, 1));
+    }
+
+    public void parcelarComImediato3Vezes() {
+        BigDecimal total = new BigDecimal("50.00");
+        MeioPagamento x = new MeioPagamento("Nubank", TipoPagamento.IMEDIATO, 0, 0);
+        LocalDate dataCompra = LocalDate.of(2026, 11, 3);
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            CalculadoraFatura.parcelar(x, dataCompra, total, 3);
+        });
+    }
+
+    @Test
     public void verificaQuantidadePositiva() {
         assertThrows(IllegalArgumentException.class, () -> {
             CalculadoraFatura.dividirEmParcelas(new BigDecimal("100.00"), 0);
@@ -165,7 +213,7 @@ public class CalculadoraFaturaTest {
     @Test
     public void verificaValorMinimoParcela() {
         assertThrows(IllegalArgumentException.class, () -> {
-            CalculadoraFatura.dividirEmParcelas(BigDecimal.valueOf(0.05), 10);
+            CalculadoraFatura.dividirEmParcelas(new BigDecimal("0.05"), 10);
         });
 
     }
@@ -173,7 +221,7 @@ public class CalculadoraFaturaTest {
     @Test
     public void verificaValorMinimoParcelaCorreto() {
         assertDoesNotThrow(() -> {
-            CalculadoraFatura.dividirEmParcelas(BigDecimal.valueOf(0.10), 10);
+            CalculadoraFatura.dividirEmParcelas(new BigDecimal("0.10"), 10);
         });
 
     }

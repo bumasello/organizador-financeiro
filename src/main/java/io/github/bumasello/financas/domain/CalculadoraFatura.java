@@ -67,4 +67,23 @@ public class CalculadoraFatura {
 
         return parcelas;
     }
+
+    public static List<Parcela> parcelar(MeioPagamento meio, LocalDate dataCompra, BigDecimal total, int quantidade) {
+        List<Parcela> parcelasCompletas = new ArrayList<>();
+
+        if (meio.tipo() == TipoPagamento.IMEDIATO && quantidade > 1) {
+            throw new IllegalArgumentException("Tipo IMEDIATO não pode ser parcelado");
+        }
+
+        List<BigDecimal> parcelas = dividirEmParcelas(total, quantidade);
+        YearMonth mesPrimeiraParcela = mesDaFatura(meio, dataCompra);
+
+        for (int i = 0; i < parcelas.size(); i++) {
+            Parcela p = new Parcela(i + 1, parcelas.get(i), mesPrimeiraParcela.plusMonths(i));
+            parcelasCompletas.add(p);
+        }
+
+        return parcelasCompletas;
+    }
+
 }
