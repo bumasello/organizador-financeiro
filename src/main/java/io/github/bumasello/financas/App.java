@@ -9,6 +9,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.repo.Database;
+import io.github.bumasello.financas.repo.MeioPagamentoRepository;
 import io.github.bumasello.financas.telegram.FinancasBot;
 
 public class App {
@@ -28,6 +29,5 @@ public class App {
         TelegramBotsLongPollingApplication bot = new TelegramBotsLongPollingApplication();
 
         bot.registerBot(token, new FinancasBot(client, lchatId));
-
     }
 }

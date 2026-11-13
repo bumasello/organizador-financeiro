@@ -31,4 +31,9 @@ public record MeioPagamento(String nome, TipoPagamento tipo, int diaFechamento, 
             }
         }
     }
+
+    public String toString() {
+        return "Nome: " + nome + ", Tipo Pagamento: " + tipo + ", Dia Fechamento: " + diaFechamento
+                + " e Dia Vencimento: " + diaVencimento;
+    }
 }
