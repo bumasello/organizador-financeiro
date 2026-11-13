@@ -38,7 +38,6 @@ public class MeioPagamentoRepository {
             pstmt.setLong(1, usuarioId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                time2 = System.nanoTime();
                 while (rs.next()) {
                     String nome = rs.getString("nome");
                     TipoPagamento tipo = TipoPagamento.valueOf(rs.getString("tipo"));
