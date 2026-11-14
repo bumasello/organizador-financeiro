@@ -9,7 +9,6 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.repo.Database;
-import io.github.bumasello.financas.repo.MeioPagamentoRepository;
 import io.github.bumasello.financas.telegram.FinancasBot;
 
 public class App {
