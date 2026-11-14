@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import io.github.bumasello.financas.domain.MeioPagamento;
 import io.github.bumasello.financas.domain.TipoPagamento;
@@ -20,8 +21,7 @@ public class MeioPagamentoRepository {
         this.database = database;
     }
 
-    public MeioPagamento buscaPorMeioPagamento(long meioPagamentoId) throws SQLException {
-        MeioPagamento meio;
+    public Optional<MeioPagamento> buscaPorId(long meioPagamentoId) throws SQLException {
         if (meioPagamentoId <= 0) {
             throw new IllegalArgumentException("meioPagamentoId não pode ser zero ou negativo");
         }
@@ -36,17 +36,18 @@ public class MeioPagamentoRepository {
             pstmt.setLong(1, meioPagamentoId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                rs.next();
-                String nome = rs.getString("nome");
-                TipoPagamento tipo = TipoPagamento.valueOf(rs.getString("tipo"));
-                int diaFechamento = rs.getInt("dia_fechamento");
-                int diaVencimento = rs.getInt("dia_vencimento");
+                if (rs.next()) {
+                    String nome = rs.getString("nome");
+                    TipoPagamento tipo = TipoPagamento.valueOf(rs.getString("tipo"));
+                    int diaFechamento = rs.getInt("dia_fechamento");
+                    int diaVencimento = rs.getInt("dia_vencimento");
 
-                meio = new MeioPagamento(nome, tipo, diaFechamento, diaVencimento);
+                    return Optional.of(new MeioPagamento(nome, tipo, diaFechamento, diaVencimento));
+                }
             }
         }
 
-        return meio;
+        return Optional.empty();
     }
 
     public List<MeioPagamento> buscaPorUsuario(long usuarioId) throws SQLException {
