@@ -33,7 +33,6 @@ public class MeioPagamentoRepository {
         if (usuarioId <= 0) {
             throw new IllegalArgumentException("usuarioId não pode ser zero ou negativo");
         }
-
         try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql);) {
             pstmt.setLong(1, usuarioId);
 

@@ -15,6 +15,7 @@
     <maven.compiler.release>21</maven.compiler.release>
     <telegrambots.version>10.3.0</telegrambots.version>
     <postgresql.version>42.7.14</postgresql.version>
+    <hikari.version>7.1.0</hikari.version>
   </properties>
 
   <dependencyManagement>
@@ -34,6 +35,11 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <version>${postgresql.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>${hikari.version}</version>
     </dependency>
     <dependency>
       <groupId>org.telegram</groupId>

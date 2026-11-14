@@ -1,27 +1,30 @@
 package io.github.bumasello.financas.repo;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * Database
  */
 public class Database {
-    private final String url;
-    private final String user;
-    private final String pass;
+    private final HikariDataSource dataSource;
 
     public Database(String url, String user, String pass) {
-        this.url = url;
-        this.user = user;
-        this.pass = pass;
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(pass);
+        config.setMaximumPoolSize(3);
+        this.dataSource = new HikariDataSource(config);
     }
 
     public Connection abrirConn() throws SQLException {
-        return DriverManager.getConnection(this.url, this.user, this.pass);
+        return this.dataSource.getConnection();
 
     }
 
