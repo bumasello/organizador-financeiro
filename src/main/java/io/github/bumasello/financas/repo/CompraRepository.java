@@ -1,9 +1,11 @@
 package io.github.bumasello.financas.repo;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.YearMonth;
 import java.util.List;
 
 import io.github.bumasello.financas.domain.Compra;
@@ -17,6 +19,34 @@ public class CompraRepository {
 
     public CompraRepository(Database database) {
         this.database = database;
+    }
+
+    public BigDecimal totalMes(long usuarioId, YearMonth mes) throws SQLException {
+        if (usuarioId <= 0) {
+            throw new IllegalArgumentException("usuarioId não pode ser zero ou negativo");
+        }
+        if (mes == null) {
+            throw new IllegalArgumentException("mes não pode ser nulo");
+        }
+
+        String sql = """
+                SELECT COALESCE(SUM(p.valor), 0::NUMERIC(12, 2))
+                FROM compra AS c
+                LEFT JOIN parcela AS p
+                  ON p.compra_id = c.id
+                WHERE p.mes_fatura = ?
+                AND c.usuario_id = ?
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql);) {
+            pstmt.setObject(1, mes.atDay(1));
+            pstmt.setLong(2, usuarioId);
+
+            try (ResultSet rs = pstmt.executeQuery();) {
+                rs.next();
+                return rs.getBigDecimal(1);
+            }
+        }
     }
 
     public long salvar(long usuarioId, long meioPagamentoId, Compra compra, List<Parcela> parcelas)
