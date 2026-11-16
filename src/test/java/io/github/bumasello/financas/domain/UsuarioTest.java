@@ -123,7 +123,7 @@ public class UsuarioTest {
 
     @Test
     public void diaSalarioCorreto() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertDoesNotThrow(() -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
                     new BigDecimal("100.00"), new BigDecimal("10000.00"));
         });
