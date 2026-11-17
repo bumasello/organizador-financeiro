@@ -15,18 +15,19 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.domain.ResumoMes;
 import io.github.bumasello.financas.service.DisponivelService;
 
 public class FinancasBot implements LongPollingUpdateConsumer {
     private final TelegramClient telegramClient;
     private final long chatIdPermitido;
-    private final DisponivelService disponivelService;
+    private final Comando comando;
 
-    public FinancasBot(TelegramClient client, long chatId, DisponivelService disponivelService) {
+    public FinancasBot(TelegramClient client, long chatId, Comando comando) {
         this.telegramClient = client;
         this.chatIdPermitido = chatId;
-        this.disponivelService = disponivelService;
+        this.comando = comando;
 
     }
 
@@ -61,32 +62,8 @@ public class FinancasBot implements LongPollingUpdateConsumer {
             }
 
             if (text.equals("/disponivel")) {
-                String msg;
-                YearMonth mesAtual = YearMonth.now(ZoneId.of("America/Sao_Paulo"));
-
-                try {
-
-                    Optional<ResumoMes> optionalResumoMes = this.disponivelService.calcular(chatId, mesAtual);
-
-                    if (optionalResumoMes.isPresent()) {
-                        ResumoMes resumoMes = optionalResumoMes.get();
-
-                        BigDecimal disponivel = resumoMes.disponivel();
-
-                        msg = "Disponível em "
-                                + mesAtual.getMonth().getDisplayName(TextStyle.FULL, Locale.of("pt", "BR")) + ": R$ "
-                                + disponivel;
-
-                        this.mandaMensagem(chatId, msg);
-
-                    } else {
-                        this.mandaMensagem(chatId, "Preencha seu perfil primeiro");
-                    }
-                } catch (SQLException e) {
-                    this.mandaMensagem(chatId, "Não consegui consultar agora. Tente novamente mais tarde!");
-                    e.printStackTrace();
-                }
-
+                String message = this.comando.executar(chatId, text);
+                this.mandaMensagem(chatId, message);
                 return;
             }
 

@@ -7,6 +7,7 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import io.github.bumasello.financas.comandos.DisponivelComando;
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.repo.AjusteRepository;
 import io.github.bumasello.financas.repo.CompraRepository;
@@ -34,6 +35,6 @@ public class App {
         DisponivelService disponivelService = new DisponivelService(new UsuarioRepository(database),
                 new CompraRepository(database), new AjusteRepository(database));
 
-        bot.registerBot(token, new FinancasBot(client, lchatId, disponivelService));
+        bot.registerBot(token, new FinancasBot(client, lchatId, new DisponivelComando(disponivelService)));
     }
 }
