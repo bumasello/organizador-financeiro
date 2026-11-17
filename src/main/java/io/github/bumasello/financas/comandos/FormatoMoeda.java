@@ -16,4 +16,12 @@ public class FormatoMoeda {
         return formato.format(valor);
     }
 
+    public static BigDecimal ler(String text) {
+
+        String textoLimpo = text.replace("R$", "").replace(".", "").replace(",", ".").strip();
+
+        return new BigDecimal(textoLimpo);
+
+    }
+
 }
