@@ -1,12 +1,15 @@
 package io.github.bumasello.financas;
 
 import java.sql.SQLException;
+import java.util.Map;
 
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import io.github.bumasello.financas.comandos.AjudaComando;
+import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.comandos.DisponivelComando;
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.repo.AjusteRepository;
@@ -35,6 +38,10 @@ public class App {
         DisponivelService disponivelService = new DisponivelService(new UsuarioRepository(database),
                 new CompraRepository(database), new AjusteRepository(database));
 
-        bot.registerBot(token, new FinancasBot(client, lchatId, new DisponivelComando(disponivelService)));
+        Map<String, Comando> commands = Map.of(
+                "/disponivel", new DisponivelComando(disponivelService),
+                "/ajuda", new AjudaComando());
+
+        bot.registerBot(token, new FinancasBot(client, lchatId, commands));
     }
 }
