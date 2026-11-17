@@ -1,12 +1,11 @@
 package io.github.bumasello.financas.repo;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
-
-import com.sun.net.httpserver.Authenticator.Result;
 
 import io.github.bumasello.financas.domain.Situacao;
 import io.github.bumasello.financas.domain.Usuario;
@@ -19,6 +18,29 @@ public class UsuarioRepository {
 
     public UsuarioRepository(Database database) {
         this.database = database;
+    }
+
+    public void atualizaRenda(long chatId, BigDecimal renda) throws SQLException {
+        if (chatId == 0) {
+            throw new IllegalArgumentException("chatId não pode ser zero");
+        }
+
+        if (renda == null) {
+            throw new IllegalArgumentException("renda não pode ser null");
+        }
+
+        String sql = """
+                UPDATE usuario
+                SET renda_mensal = ?
+                WHERE telegram_chat_id = ?
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, renda);
+            pstmt.setLong(2, chatId);
+
+            pstmt.executeUpdate();
+        }
     }
 
     public void cadastraChatId(long chatId) throws SQLException {
