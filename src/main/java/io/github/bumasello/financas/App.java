@@ -24,8 +24,6 @@ public class App {
     public static void main(String[] args) throws TelegramApiException, SQLException {
         String token = Settings.getTelegramKey();
 
-        long lchatId = Settings.getChatId();
-
         Database database = new Database(Settings.getDbUrl(), Settings.getDbUser(), Settings.getDbPass());
 
         String schema = database.schemaAtual();
@@ -43,6 +41,6 @@ public class App {
                 "/disponivel", new DisponivelComando(disponivelService),
                 "/ajuda", new AjudaComando(), "/start", new StartComando(new UsuarioRepository(database)));
 
-        bot.registerBot(token, new FinancasBot(client, lchatId, commands));
+        bot.registerBot(token, new FinancasBot(client, new UsuarioRepository(database), commands));
     }
 }
