@@ -21,6 +21,24 @@ public class UsuarioRepository {
         this.database = database;
     }
 
+    public void cadastraChatId(long chatId) throws SQLException {
+        if (chatId == 0) {
+            throw new IllegalArgumentException("chatId não pode ser zero");
+        }
+
+        String sql = """
+                INSERT INTO usuario (telegram_chat_id)
+                VALUES (?)
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, chatId);
+
+            pstmt.executeUpdate();
+        }
+    }
+
     public Optional<Usuario> buscaPorChatId(long chatId) throws SQLException {
         if (chatId == 0) {
             throw new IllegalArgumentException("chatId não pode ser zero");

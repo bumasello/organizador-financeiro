@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import io.github.bumasello.financas.comandos.AjudaComando;
 import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.comandos.DisponivelComando;
+import io.github.bumasello.financas.comandos.StartComando;
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.repo.AjusteRepository;
 import io.github.bumasello.financas.repo.CompraRepository;
@@ -40,7 +41,7 @@ public class App {
 
         Map<String, Comando> commands = Map.of(
                 "/disponivel", new DisponivelComando(disponivelService),
-                "/ajuda", new AjudaComando());
+                "/ajuda", new AjudaComando(), "/start", new StartComando(new UsuarioRepository(database)));
 
         bot.registerBot(token, new FinancasBot(client, lchatId, commands));
     }

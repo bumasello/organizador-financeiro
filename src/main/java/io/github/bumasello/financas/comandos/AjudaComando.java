@@ -9,6 +9,7 @@ public class AjudaComando implements Comando {
     public String executar(long chatId, String texto) {
         return """
                 /disponivel - quanto ainda posso gastar no mês
+                /start - cadastrar um usuário
                 /ajuda - esta lista
                 """;
     }
