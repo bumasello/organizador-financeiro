@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
-import java.util.Locale;
 import java.util.Optional;
 
 import io.github.bumasello.financas.domain.ResumoMes;
@@ -35,9 +34,8 @@ public class DisponivelComando implements Comando {
                 BigDecimal disponivel = resumoMes.disponivel();
 
                 return "Disponível em "
-                        + mesAtual.getMonth().getDisplayName(TextStyle.FULL, Locale.of("pt", "BR")) + ": R$ "
-                        + disponivel;
-
+                        + mesAtual.getMonth().getDisplayName(TextStyle.FULL, FormatoMoeda.LOCALE) + ": "
+                        + FormatoMoeda.formatar(disponivel);
             } else {
                 return "Preencha seu perfil primeiro";
             }

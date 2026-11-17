@@ -1,6 +1,7 @@
 package io.github.bumasello.financas.telegram;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -44,8 +45,12 @@ public class FinancasBot implements LongPollingUpdateConsumer {
     private void processar(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String text = update.getMessage().getText().trim().toLowerCase();
+            String text = update.getMessage().getText();
+
+            String comandoDigitado = text.strip().split(" ")[0].toLowerCase(Locale.ROOT);
             long chatId = update.getMessage().getChatId();
+
+            System.out.println(comandoDigitado);
 
             if (chatId != this.chatIdPermitido) {
                 System.out.println("Chat Id ignorado: " + chatId);
@@ -53,7 +58,7 @@ public class FinancasBot implements LongPollingUpdateConsumer {
                 return;
             }
 
-            Comando comando = this.comandos.get(text);
+            Comando comando = this.comandos.get(comandoDigitado);
 
             if (comando != null) {
                 String message = comando.executar(chatId, text);
