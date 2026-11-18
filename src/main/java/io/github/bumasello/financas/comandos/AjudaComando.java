@@ -1,5 +1,7 @@
 package io.github.bumasello.financas.comandos;
 
+import java.util.List;
+
 /**
  * AjudaComando
  */
@@ -7,13 +9,9 @@ public class AjudaComando implements Comando {
 
     @Override
     public Resposta executar(long chatId, String texto) {
-        String respostaTexto = """
-                /perfil - cadastrar perfil
-                /disponivel - quanto ainda posso gastar no mês
-                /start - cadastrar um usuário
-                /ajuda - esta lista
-                """;
 
-        return new Resposta(respostaTexto);
+        List<String> botoes = List.of("/disponivel", "/perfil", "/ajuda");
+
+        return new Resposta("Segue a lista de comandos disponíveis.", botoes);
     }
 }
