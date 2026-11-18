@@ -17,6 +17,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.comandos.Resposta;
+import io.github.bumasello.financas.conversa.ConversaObjetivo;
+import io.github.bumasello.financas.domain.EstadoConversa;
 import io.github.bumasello.financas.domain.Situacao;
 import io.github.bumasello.financas.domain.Usuario;
 import io.github.bumasello.financas.repo.UsuarioRepository;
@@ -24,11 +26,14 @@ import io.github.bumasello.financas.repo.UsuarioRepository;
 public class FinancasBot implements LongPollingUpdateConsumer {
     private final TelegramClient telegramClient;
     private final UsuarioRepository usuarioRepository;
+    private final ConversaObjetivo conversaObjetivo;
     private final Map<String, Comando> comandos;
 
-    public FinancasBot(TelegramClient client, UsuarioRepository usuarioRepository, Map<String, Comando> comandos) {
+    public FinancasBot(TelegramClient client, UsuarioRepository usuarioRepository, ConversaObjetivo conversaObjetivo,
+            Map<String, Comando> comandos) {
         this.telegramClient = client;
         this.usuarioRepository = usuarioRepository;
+        this.conversaObjetivo = conversaObjetivo;
         this.comandos = comandos;
 
     }
@@ -71,11 +76,6 @@ public class FinancasBot implements LongPollingUpdateConsumer {
             Comando comando = this.comandos.get(comandoDigitado);
             long chatId = update.getMessage().getChatId();
 
-            if (comando == null) {
-                this.mandaMensagem(chatId, new Resposta("Digite um comando válido. /ajuda para listar os comandos"));
-                return;
-            }
-
             if (comandoDigitado.equals("/start")) {
                 Resposta resposta = comando.executar(chatId, text);
 
@@ -104,6 +104,18 @@ public class FinancasBot implements LongPollingUpdateConsumer {
                     }
 
                     this.mandaMensagem(chatId, new Resposta("Você não tem acesso a este comando."));
+                    return;
+                }
+
+                if (usuario.estadoConversa() != EstadoConversa.OCIOSO) {
+                    Resposta resposta = this.conversaObjetivo.responder(chatId, usuario.estadoConversa(), text);
+                    this.mandaMensagem(chatId, resposta);
+                    return;
+                }
+
+                if (comando == null) {
+                    this.mandaMensagem(chatId,
+                            new Resposta("Digite um comando válido. /ajuda para listar os comandos"));
                     return;
                 }
 

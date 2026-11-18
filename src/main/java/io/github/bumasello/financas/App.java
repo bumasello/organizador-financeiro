@@ -15,6 +15,7 @@ import io.github.bumasello.financas.comandos.ObjetivoComando;
 import io.github.bumasello.financas.comandos.PerfilComando;
 import io.github.bumasello.financas.comandos.StartComando;
 import io.github.bumasello.financas.config.Settings;
+import io.github.bumasello.financas.conversa.ConversaObjetivo;
 import io.github.bumasello.financas.repo.AjusteRepository;
 import io.github.bumasello.financas.repo.CompraRepository;
 import io.github.bumasello.financas.repo.Database;
@@ -42,12 +43,13 @@ public class App {
 
         Map<String, Comando> commands = Map.of(
                 "/disponivel", new DisponivelComando(disponivelService),
-                "/perfil", new PerfilComando(new UsuarioRepository(database)), "/objetivo",
+                "/perfil", new PerfilComando(usuarioRepository), "/objetivo",
                 new ObjetivoComando(usuarioRepository),
                 "/start",
-                new StartComando(new UsuarioRepository(database)),
+                new StartComando(usuarioRepository),
                 "/ajuda", new AjudaComando());
 
-        bot.registerBot(token, new FinancasBot(client, new UsuarioRepository(database), commands));
+        bot.registerBot(token,
+                new FinancasBot(client, usuarioRepository, new ConversaObjetivo(usuarioRepository), commands));
     }
 }
