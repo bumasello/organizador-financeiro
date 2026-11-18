@@ -9,9 +9,16 @@ public class AjudaComando implements Comando {
 
     @Override
     public Resposta executar(long chatId, String texto) {
+        String respostaTexto = """
+                /perfil - cadastrar perfil
+                /disponivel - quanto ainda posso gastar no mês
+                /objetivo - atualizar aporte e/ou meta
+                /start - cadastrar um usuário
+                /ajuda - esta lista
+                """;
 
-        List<String> botoes = List.of("/disponivel", "/perfil", "/ajuda");
+        List<String> botoes = List.of("/disponivel", "/perfil", "/objetivo", "/ajuda");
 
-        return new Resposta("Segue a lista de comandos disponíveis.", botoes);
+        return new Resposta(respostaTexto, botoes);
     }
 }
