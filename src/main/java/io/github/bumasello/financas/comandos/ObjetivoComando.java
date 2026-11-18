@@ -1,6 +1,5 @@
 package io.github.bumasello.financas.comandos;
 
-import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 

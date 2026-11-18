@@ -13,7 +13,7 @@ import io.github.bumasello.financas.repo.UsuarioRepository;
 /**
  * ConversaObjetivo
  */
-public class ConversaObjetivo {
+public class ConversaObjetivo implements Conversa {
 
     private final UsuarioRepository usuarioRepository;
 

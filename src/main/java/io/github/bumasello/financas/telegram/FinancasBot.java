@@ -17,7 +17,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.comandos.Resposta;
-import io.github.bumasello.financas.conversa.ConversaObjetivo;
+import io.github.bumasello.financas.conversa.Conversa;
 import io.github.bumasello.financas.domain.EstadoConversa;
 import io.github.bumasello.financas.domain.Situacao;
 import io.github.bumasello.financas.domain.Usuario;
@@ -26,15 +26,15 @@ import io.github.bumasello.financas.repo.UsuarioRepository;
 public class FinancasBot implements LongPollingUpdateConsumer {
     private final TelegramClient telegramClient;
     private final UsuarioRepository usuarioRepository;
-    private final ConversaObjetivo conversaObjetivo;
     private final Map<String, Comando> comandos;
+    private final Map<EstadoConversa, Conversa> conversas;
 
-    public FinancasBot(TelegramClient client, UsuarioRepository usuarioRepository, ConversaObjetivo conversaObjetivo,
-            Map<String, Comando> comandos) {
+    public FinancasBot(TelegramClient client, UsuarioRepository usuarioRepository,
+            Map<String, Comando> comandos, Map<EstadoConversa, Conversa> conversas) {
         this.telegramClient = client;
         this.usuarioRepository = usuarioRepository;
-        this.conversaObjetivo = conversaObjetivo;
         this.comandos = comandos;
+        this.conversas = conversas;
 
     }
 
@@ -108,7 +108,8 @@ public class FinancasBot implements LongPollingUpdateConsumer {
                 }
 
                 if (usuario.estadoConversa() != EstadoConversa.OCIOSO) {
-                    Resposta resposta = this.conversaObjetivo.responder(chatId, usuario.estadoConversa(), text);
+                    Conversa conversa = conversas.get(usuario.estadoConversa());
+                    Resposta resposta = conversa.responder(chatId, usuario.estadoConversa(), text);
                     this.mandaMensagem(chatId, resposta);
                     return;
                 }

@@ -21,6 +21,55 @@ public class UsuarioRepository {
         this.database = database;
     }
 
+    public Optional<String> buscaContextoPorChatId(long chatId) throws SQLException {
+        if (chatId == 0) {
+            throw new IllegalArgumentException("chatId não pode ser zero");
+        }
+
+        String sql = """
+                SELECT
+                    contexto_conversa
+                FROM usuario
+                WHERE telegram_chat_id = ?
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, chatId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.ofNullable(rs.getString(1));
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    public void atualizaContextoConversa(long chatId, String texto) throws SQLException {
+        if (chatId == 0) {
+            throw new IllegalArgumentException("chatId não pode ser zero");
+        }
+
+        if (texto == null) {
+            throw new IllegalArgumentException("texto não pode ser nulo");
+        }
+
+        String sql = """
+                UPDATE usuario
+                SET contexto_conversa = ?::jsonb
+                WHERE telegram_chat_id = ?
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, texto);
+            pstmt.setLong(2, chatId);
+
+            pstmt.executeUpdate();
+        }
+    }
+
     public void atualizaEstado(long chatId, EstadoConversa estadoConversa) throws SQLException {
         if (chatId == 0) {
             throw new IllegalArgumentException("chatId não pode ser zero");
