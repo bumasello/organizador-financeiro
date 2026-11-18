@@ -14,7 +14,7 @@ public class ObjetivoComandoTest {
 
         String texto = "/objetivo 1000.00 2000.00 3000.00";
 
-        assertEquals("Use: /objetivo valor1 valor2", new ObjetivoComando(null).executar(123L, texto));
+        assertEquals("Use: /objetivo valor1 valor2", new ObjetivoComando(null).executar(123L, texto).texto());
     }
 
     @Test
@@ -22,7 +22,7 @@ public class ObjetivoComandoTest {
 
         String texto = "/objetivo -1000.00 2000.00";
 
-        assertEquals("O aporte não pode ser negativo.", new ObjetivoComando(null).executar(123L, texto));
+        assertEquals("O aporte não pode ser negativo.", new ObjetivoComando(null).executar(123L, texto).texto());
     }
 
     @Test
@@ -30,7 +30,7 @@ public class ObjetivoComandoTest {
 
         String texto = "/objetivo 1000.00 -2000.00";
 
-        assertEquals("A meta reserva não pode ser negativa.", new ObjetivoComando(null).executar(123L, texto));
+        assertEquals("A meta reserva não pode ser negativa.", new ObjetivoComando(null).executar(123L, texto).texto());
     }
 
     @Test
@@ -40,6 +40,6 @@ public class ObjetivoComandoTest {
         String[] partes = texto.strip().split(" ");
 
         assertEquals("Não entendi um desses valores: " + partes[1] + " e " + partes[2],
-                new ObjetivoComando(null).executar(123L, texto));
+                new ObjetivoComando(null).executar(123L, texto).texto());
     }
 }

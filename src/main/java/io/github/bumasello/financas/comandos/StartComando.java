@@ -17,7 +17,7 @@ public class StartComando implements Comando {
     }
 
     @Override
-    public String executar(long chatId, String texto) {
+    public Resposta executar(long chatId, String texto) {
 
         try {
 
@@ -25,16 +25,17 @@ public class StartComando implements Comando {
 
             if (optionalUsuario.isPresent()) {
                 Usuario usuario = optionalUsuario.get();
-                return "Usuário já cadastrado! Situação: " + usuario.situacao();
+                String respostaTexto = "Usuário já cadastrado! Situação: " + usuario.situacao();
+                return new Resposta(respostaTexto);
             }
 
             this.usuarioRepository.cadastraChatId(chatId);
 
-            return "Usuário cadastrado com sucesso!";
+            return new Resposta("Usuário cadastrado com sucesso!");
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Não foi possível cadastrar usuário";
+            return new Resposta("Não foi possível cadastrar usuário");
         }
 
     }

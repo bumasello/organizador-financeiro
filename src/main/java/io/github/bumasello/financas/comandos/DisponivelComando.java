@@ -22,7 +22,7 @@ public class DisponivelComando implements Comando {
     }
 
     @Override
-    public String executar(long chatId, String texto) {
+    public Resposta executar(long chatId, String texto) {
         YearMonth mesAtual = YearMonth.now(ZoneId.of("America/Sao_Paulo"));
 
         try {
@@ -33,15 +33,17 @@ public class DisponivelComando implements Comando {
 
                 BigDecimal disponivel = resumoMes.disponivel();
 
-                return "Disponível em "
+                String respostaTexto = "Disponível em "
                         + mesAtual.getMonth().getDisplayName(TextStyle.FULL, FormatoMoeda.LOCALE) + ": "
                         + FormatoMoeda.formatar(disponivel);
+
+                return new Resposta(respostaTexto);
             } else {
-                return "Preencha seu perfil primeiro";
+                return new Resposta("Preencha seu perfil primeiro");
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Não consegui consultar agora. Tente novamente mais tarde!";
+            return new Resposta("Não consegui consultar agora. Tente novamente mais tarde!");
         }
 
     }

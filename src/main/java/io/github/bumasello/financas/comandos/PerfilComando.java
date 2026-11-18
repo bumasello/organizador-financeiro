@@ -16,12 +16,12 @@ public class PerfilComando implements Comando {
     }
 
     @Override
-    public String executar(long chatId, String texto) {
+    public Resposta executar(long chatId, String texto) {
         BigDecimal renda;
         String[] partes = texto.strip().split(" ", 2);
 
         if (partes.length == 1) {
-            return "Use: /perfil 2.500,00";
+            return new Resposta("Use: /perfil 2.500,00");
         }
 
         String valorRenda = partes[1];
@@ -29,19 +29,20 @@ public class PerfilComando implements Comando {
             renda = FormatoMoeda.ler(valorRenda);
 
             if (renda.compareTo(BigDecimal.ZERO) < 0) {
-                return "A renda não pode ser negativa.";
+                return new Resposta("A renda não pode ser negativa.");
             }
 
         } catch (NumberFormatException e) {
-            return "Não entendi o valor";
+            return new Resposta("Não entendi o valor");
         }
 
         try {
             this.usuarioRepository.atualizaRenda(chatId, renda);
-            return "Renda atualizada: " + FormatoMoeda.formatar(renda);
+            String respostaTexto = "Renda atualizada: " + FormatoMoeda.formatar(renda);
+            return new Resposta(respostaTexto);
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Não consegui atualizar a sua renda no momento. Tente novamente mais tarde!";
+            return new Resposta("Não consegui atualizar a sua renda no momento. Tente novamente mais tarde!");
         }
     }
 }

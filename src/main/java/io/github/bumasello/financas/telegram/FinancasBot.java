@@ -62,7 +62,7 @@ public class FinancasBot implements LongPollingUpdateConsumer {
             }
 
             if (comandoDigitado.equals("/start")) {
-                String message = comando.executar(chatId, text);
+                String message = comando.executar(chatId, text).texto();
                 this.mandaMensagem(chatId, message);
                 return;
             }
@@ -91,7 +91,7 @@ public class FinancasBot implements LongPollingUpdateConsumer {
                     return;
                 }
 
-                String message = comando.executar(chatId, text);
+                String message = comando.executar(chatId, text).texto();
                 this.mandaMensagem(chatId, message);
                 return;
 
