@@ -20,6 +20,10 @@ public record Usuario(long id, long telegramChatId, String nome, Situacao situac
             throw new IllegalArgumentException("situacao não pode ser nula");
         }
 
+        if (estadoConversa == null) {
+            throw new IllegalArgumentException("estadoConversa não pode ser nulo");
+        }
+
         if (nome != null && nome.isBlank()) {
             throw new IllegalArgumentException("nome precisa estar preenchido corretamente");
         }

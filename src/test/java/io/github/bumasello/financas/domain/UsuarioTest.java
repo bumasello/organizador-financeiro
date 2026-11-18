@@ -50,6 +50,15 @@ public class UsuarioTest {
     }
 
     @Test
+    public void estadoConversaNulo() {
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Usuario(1, 1, "Bruno Masello", null, new BigDecimal("1000.00"), 6,
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), null);
+        });
+    }
+
+    @Test
     public void nomeVazio() {
 
         assertThrows(IllegalArgumentException.class, () -> {
