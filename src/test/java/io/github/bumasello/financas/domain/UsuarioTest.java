@@ -16,9 +16,9 @@ public class UsuarioTest {
     @Test
     public void devemSerIguais() {
         Usuario x = new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         Usuario z = new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
 
         assertEquals(x, z);
     }
@@ -27,7 +27,7 @@ public class UsuarioTest {
     public void construtorCompleto() {
         assertDoesNotThrow(() -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
 
         });
     }
@@ -45,7 +45,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", null, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -54,7 +54,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -63,7 +63,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "    ", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -72,7 +72,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("-10.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -81,7 +81,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("-10.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("-10.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -90,7 +90,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    null, new BigDecimal("-10.00"));
+                    null, new BigDecimal("-10.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -99,7 +99,7 @@ public class UsuarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("-10.00"));
+                    new BigDecimal("100.00"), new BigDecimal("-10.00"), EstadoConversa.OCIOSO);
         });
     }
 
@@ -107,7 +107,7 @@ public class UsuarioTest {
     public void diaSalarioIncorretoMenor1() {
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 0,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
 
     }
@@ -116,7 +116,7 @@ public class UsuarioTest {
     public void diaSalarioIncorretoMaior31() {
         assertThrows(IllegalArgumentException.class, () -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 32,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
 
     }
@@ -125,7 +125,7 @@ public class UsuarioTest {
     public void diaSalarioCorreto() {
         assertDoesNotThrow(() -> {
             new Usuario(1, 1, "Bruno Masello", Situacao.APROVADO, new BigDecimal("1000.00"), 6,
-                    new BigDecimal("100.00"), new BigDecimal("10000.00"));
+                    new BigDecimal("100.00"), new BigDecimal("10000.00"), EstadoConversa.OCIOSO);
         });
 
     }

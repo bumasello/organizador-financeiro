@@ -6,12 +6,13 @@ import java.math.BigDecimal;
  * Usuario
  */
 public record Usuario(long id, long telegramChatId, String nome, Situacao situacao,
-        BigDecimal rendaMensal, Integer diaSalario, BigDecimal aporteMensal, BigDecimal metaReserva) {
+        BigDecimal rendaMensal, Integer diaSalario, BigDecimal aporteMensal, BigDecimal metaReserva,
+        EstadoConversa estadoConversa) {
 
     public Usuario(long id, long telegramChatId, Situacao situacao, BigDecimal aporteMensal, BigDecimal metaReserva) {
         this(id, telegramChatId, null, situacao, null,
                 null,
-                aporteMensal, metaReserva);
+                aporteMensal, metaReserva, EstadoConversa.OCIOSO);
     }
 
     public Usuario {

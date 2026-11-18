@@ -14,6 +14,7 @@ import io.github.bumasello.financas.comandos.DisponivelComando;
 import io.github.bumasello.financas.comandos.PerfilComando;
 import io.github.bumasello.financas.comandos.StartComando;
 import io.github.bumasello.financas.config.Settings;
+import io.github.bumasello.financas.domain.EstadoConversa;
 import io.github.bumasello.financas.repo.AjusteRepository;
 import io.github.bumasello.financas.repo.CompraRepository;
 import io.github.bumasello.financas.repo.Database;
