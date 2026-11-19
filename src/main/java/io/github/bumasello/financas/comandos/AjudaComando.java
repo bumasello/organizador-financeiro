@@ -14,10 +14,11 @@ public class AjudaComando implements Comando {
                 /disponivel - quanto ainda posso gastar no mês
                 /objetivo - atualizar aporte e/ou meta
                 /start - cadastrar um usuário
+                /cartao - cadastrar um novo cartão
                 /ajuda - esta lista
                 """;
 
-        List<String> botoes = List.of("/disponivel", "/perfil", "/objetivo", "/ajuda");
+        List<String> botoes = List.of("/disponivel", "/perfil", "/objetivo", "/cartao", "/ajuda");
 
         return new Resposta(respostaTexto, botoes);
     }

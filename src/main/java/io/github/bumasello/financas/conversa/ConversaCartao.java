@@ -20,6 +20,7 @@ import io.github.bumasello.financas.repo.UsuarioRepository;
 public class ConversaCartao implements Conversa {
     private final MeioPagamentoRepository meioPagamentoRepository;
     private final UsuarioRepository usuarioRepository;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public ConversaCartao(MeioPagamentoRepository meioPagamentoRepository, UsuarioRepository usuarioRepository) {
         this.meioPagamentoRepository = meioPagamentoRepository;
@@ -47,12 +48,11 @@ public class ConversaCartao implements Conversa {
                     try {
                         String nomeCartao = texto.strip();
 
-                        ObjectMapper mapper = new ObjectMapper();
-                        RascunhoCartao rascunhoCartao = new RascunhoCartao(nomeCartao, null, null, null);
-                        String rascunhoString;
-
                         try {
-                            rascunhoString = mapper.writeValueAsString(rascunhoCartao);
+                            RascunhoCartao rascunhoCartao = new RascunhoCartao(nomeCartao, null, null, null);
+                            this.gravarRascunho(chatId, rascunhoCartao);
+
+                            this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.ESCOLHENDO_TIPO_PAGAMENTO);
                         } catch (JsonProcessingException e) {
                             e.printStackTrace();
                             return new Resposta("Não consegui entender o que foi digitado. Pode digitar novamente?");
@@ -64,9 +64,6 @@ public class ConversaCartao implements Conversa {
                                         IMEDIATO - Pagamento no Débito, PIX, etc...
                                         """;
 
-                        this.usuarioRepository.atualizaContextoConversa(chatId, rascunhoString);
-                        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.ESCOLHENDO_TIPO_PAGAMENTO);
-
                         return new Resposta(resposta, List.of("CREDITO", "IMEDIATO"));
                     } catch (NumberFormatException e) {
                         return new Resposta("Não entendi o valor.");
@@ -75,29 +72,25 @@ public class ConversaCartao implements Conversa {
                 case ESCOLHENDO_TIPO_PAGAMENTO -> {
                     switch (texto.strip().toLowerCase()) {
                         case "credito" -> {
-                            Optional<String> optionalRascunhoString = this.usuarioRepository
-                                    .buscaContextoPorChatId(chatId);
-
-                            if (optionalRascunhoString.isEmpty()) {
-                                this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                                String resposta = """
-                                            Não encontramos cartão cadastrado.
-                                            Digite /cartao para cadastrar um novo cartão.
-                                        """;
-                                return new Resposta(
-                                        resposta);
-                            }
-
-                            String rascunhoCartao = optionalRascunhoString.get();
-                            ObjectMapper mapper = new ObjectMapper();
-                            RascunhoCartao rascunho;
                             try {
-                                rascunho = mapper.readValue(rascunhoCartao, RascunhoCartao.class);
+                                Optional<RascunhoCartao> optionalRascunho = this.lerRascunho(chatId);
+
+                                if (optionalRascunho.isEmpty()) {
+                                    this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+                                    String resposta = """
+                                                Não encontramos cartão cadastrado.
+                                                Digite /cartao para cadastrar um novo cartão.
+                                            """;
+                                    return new Resposta(
+                                            resposta);
+
+                                }
+
+                                RascunhoCartao rascunho = optionalRascunho.get();
                                 RascunhoCartao novoRascunho = new RascunhoCartao(rascunho.nome(), TipoPagamento.CREDITO,
                                         null, null);
 
-                                String novoRascunhoString = mapper.writeValueAsString(novoRascunho);
-                                this.usuarioRepository.atualizaContextoConversa(chatId, novoRascunhoString);
+                                this.gravarRascunho(chatId, novoRascunho);
                                 this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.ESCOLHENDO_DIA_FECHAMENTO);
                                 return new Resposta("Qual seria o dia de Fechamento da fatura do cartão?");
                             } catch (JsonProcessingException e) {
@@ -106,43 +99,41 @@ public class ConversaCartao implements Conversa {
 
                         }
                         case "imediato" -> {
-                            Optional<String> optionalRascunhoString = this.usuarioRepository
-                                    .buscaContextoPorChatId(chatId);
-
-                            if (optionalRascunhoString.isEmpty()) {
-                                this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                                String resposta = """
-                                            Não encontramos cartão cadastrado.
-                                            Digite /cartao para cadastrar um novo cartão.
-                                        """;
-                                return new Resposta(
-                                        resposta);
-                            }
-
-                            String rascunhoCartao = optionalRascunhoString.get();
-                            ObjectMapper mapper = new ObjectMapper();
-                            RascunhoCartao rascunho;
                             try {
-                                rascunho = mapper.readValue(rascunhoCartao, RascunhoCartao.class);
+                                Optional<RascunhoCartao> optionalRascunho = this.lerRascunho(chatId);
 
-                                MeioPagamento meio = new MeioPagamento(rascunho.nome(), TipoPagamento.IMEDIATO, 0, 0);
+                                if (optionalRascunho.isEmpty()) {
+                                    this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+                                    String resposta = """
+                                                Não encontramos cartão cadastrado.
+                                                Digite /cartao para cadastrar um novo cartão.
+                                            """;
+                                    return new Resposta(
+                                            resposta);
+
+                                }
+
+                                RascunhoCartao rascunho = optionalRascunho.get();
                                 Optional<Usuario> optionalUsuario = this.usuarioRepository.buscaPorChatId(chatId);
 
                                 if (optionalUsuario.isEmpty()) {
                                     return new Resposta("Usuário não encontrado. Digite /start para se cadastrar.");
                                 }
 
+                                MeioPagamento meio = new MeioPagamento(rascunho.nome(),
+                                        TipoPagamento.IMEDIATO,
+                                        0, 0);
+
                                 Usuario usuario = optionalUsuario.get();
 
                                 this.meioPagamentoRepository.salvar(usuario.id(), meio);
 
-                                this.usuarioRepository.atualizaContextoConversa(chatId, null);
+                                this.usuarioRepository.limpaContextoConversa(chatId);
                                 this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                                return new Resposta("Forma de pagamento cadastrada com sucesso!");
+                                return new Resposta("Cartão cadastrado com sucesso!");
                             } catch (JsonProcessingException e) {
                                 return new Resposta("Não entendi o valor.");
                             }
-
                         }
                         default -> {
                             return new Resposta("Selecione uma das opções: CREDITO ou IMEDIATO");
@@ -161,31 +152,26 @@ public class ConversaCartao implements Conversa {
                         return new Resposta("Digite apenas valores numéricos entre 1 e 31.");
                     }
 
-                    Optional<String> optionalRascunho = this.usuarioRepository.buscaContextoPorChatId(chatId);
-
-                    if (optionalRascunho.isEmpty()) {
-                        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                        String resposta = """
-                                    Não encontramos cartão cadastrado.
-                                    Digite /cartao para cadastrar um novo cartão.
-                                """;
-                        return new Resposta(
-                                resposta);
-
-                    }
-
-                    String rascunhoCartao = optionalRascunho.get();
-                    ObjectMapper mapper = new ObjectMapper();
-                    RascunhoCartao rascunho;
-
                     try {
+                        Optional<RascunhoCartao> optionalRascunho = this.lerRascunho(chatId);
 
-                        rascunho = mapper.readValue(rascunhoCartao, RascunhoCartao.class);
+                        if (optionalRascunho.isEmpty()) {
+                            this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+                            String resposta = """
+                                        Não encontramos cartão cadastrado.
+                                        Digite /cartao para cadastrar um novo cartão.
+                                    """;
+                            return new Resposta(
+                                    resposta);
+
+                        }
+
+                        RascunhoCartao rascunho = optionalRascunho.get();
                         RascunhoCartao novoRascunho = new RascunhoCartao(rascunho.nome(), rascunho.tipo(), dia,
                                 null);
 
-                        String novoRascunhoString = mapper.writeValueAsString(novoRascunho);
-                        this.usuarioRepository.atualizaContextoConversa(chatId, novoRascunhoString);
+                        this.gravarRascunho(chatId, novoRascunho);
+
                         this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.ESCOLHENDO_DIA_VENCIMENTO);
                         return new Resposta("Qual seria o dia de Vencimento da fatura do cartão?");
                     } catch (JsonProcessingException e) {
@@ -205,25 +191,21 @@ public class ConversaCartao implements Conversa {
                         return new Resposta("Digite apenas valores numéricos entre 1 e 31.");
                     }
 
-                    Optional<String> optionalRascunho = this.usuarioRepository.buscaContextoPorChatId(chatId);
-
-                    if (optionalRascunho.isEmpty()) {
-                        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                        String resposta = """
-                                    Não encontramos cartão cadastrado.
-                                    Digite /cartao para cadastrar um novo cartão.
-                                """;
-                        return new Resposta(
-                                resposta);
-
-                    }
-
-                    String rascunhoCartao = optionalRascunho.get();
-                    ObjectMapper mapper = new ObjectMapper();
-                    RascunhoCartao rascunho;
-
                     try {
-                        rascunho = mapper.readValue(rascunhoCartao, RascunhoCartao.class);
+                        Optional<RascunhoCartao> optionalRascunho = this.lerRascunho(chatId);
+
+                        if (optionalRascunho.isEmpty()) {
+                            this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+                            String resposta = """
+                                        Não encontramos cartão cadastrado.
+                                        Digite /cartao para cadastrar um novo cartão.
+                                    """;
+                            return new Resposta(
+                                    resposta);
+
+                        }
+
+                        RascunhoCartao rascunhoCartao = optionalRascunho.get();
 
                         Optional<Usuario> optionalUsuario = this.usuarioRepository.buscaPorChatId(chatId);
 
@@ -233,12 +215,12 @@ public class ConversaCartao implements Conversa {
 
                         Usuario usuario = optionalUsuario.get();
 
-                        MeioPagamento meio = new MeioPagamento(rascunho.nome(), rascunho.tipo(),
-                                rascunho.diaFechamento(), dia);
+                        MeioPagamento meio = new MeioPagamento(rascunhoCartao.nome(), rascunhoCartao.tipo(),
+                                rascunhoCartao.diaFechamento(), dia);
 
                         this.meioPagamentoRepository.salvar(usuario.id(), meio);
 
-                        this.usuarioRepository.atualizaContextoConversa(chatId, null);
+                        this.usuarioRepository.limpaContextoConversa(chatId);
                         this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
                         return new Resposta("Forma de pagamento cadastrada com sucesso!");
                     } catch (JsonProcessingException e) {
@@ -255,6 +237,27 @@ public class ConversaCartao implements Conversa {
             e.printStackTrace();
             return new Resposta("Não consigo continuar agora. Tente novamente mais tarde!");
         }
+    }
+
+    private Optional<RascunhoCartao> lerRascunho(long chatId) throws JsonProcessingException, SQLException {
+
+        Optional<String> optionalRascunho = this.usuarioRepository.buscaContextoPorChatId(chatId);
+
+        if (optionalRascunho.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String rascunho = optionalRascunho.get();
+        RascunhoCartao novoRascunho = MAPPER.readValue(rascunho, RascunhoCartao.class);
+
+        return Optional.of(novoRascunho);
+    }
+
+    private void gravarRascunho(long chatId, RascunhoCartao rascunho) throws JsonProcessingException, SQLException {
+
+        String rascunhoString = MAPPER.writeValueAsString(rascunho);
+        this.usuarioRepository.atualizaContextoConversa(chatId, rascunhoString);
+
     }
 
 }

@@ -76,14 +76,14 @@ public class FinancasBot implements LongPollingUpdateConsumer {
             Comando comando = this.comandos.get(comandoDigitado);
             long chatId = update.getMessage().getChatId();
 
-            if (comandoDigitado.equals("/start")) {
-                Resposta resposta = comando.executar(chatId, text);
-
-                this.mandaMensagem(chatId, resposta);
-                return;
-            }
-
             try {
+                if (comandoDigitado.equals("/start")) {
+                    Resposta resposta = comando.executar(chatId, text);
+
+                    this.mandaMensagem(chatId, resposta);
+                    return;
+                }
+
                 Optional<Usuario> optionalUsuario = this.usuarioRepository.buscaPorChatId(chatId);
 
                 if (optionalUsuario.isEmpty()) {
@@ -109,6 +109,11 @@ public class FinancasBot implements LongPollingUpdateConsumer {
 
                 if (usuario.estadoConversa() != EstadoConversa.OCIOSO) {
                     Conversa conversa = conversas.get(usuario.estadoConversa());
+                    if (conversa == null) {
+                        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+                        this.mandaMensagem(chatId, new Resposta("Me perdi na mensagem. Vamos recomeçar!"));
+                        return;
+                    }
                     Resposta resposta = conversa.responder(chatId, usuario.estadoConversa(), text);
                     this.mandaMensagem(chatId, resposta);
                     return;
@@ -128,6 +133,10 @@ public class FinancasBot implements LongPollingUpdateConsumer {
                 e.printStackTrace();
                 this.mandaMensagem(chatId,
                         new Resposta("Não consegui verificar sua situação no momento. Tente novamente mais tarde!"));
+                return;
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                this.mandaMensagem(chatId, new Resposta("Aconteceu um erro inesperado. Tente novamente mais tarde!"));
                 return;
             }
         }

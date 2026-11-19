@@ -21,6 +21,25 @@ public class UsuarioRepository {
         this.database = database;
     }
 
+    public void limpaContextoConversa(long chatId) throws SQLException {
+        if (chatId == 0) {
+            throw new IllegalArgumentException("chatId não pode ser zero");
+        }
+
+        String sql = """
+                UPDATE usuario
+                SET contexto_conversa = null
+                WHERE telegram_chat_id = ?
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, chatId);
+
+            pstmt.executeUpdate();
+        }
+
+    }
+
     public Optional<String> buscaContextoPorChatId(long chatId) throws SQLException {
         if (chatId == 0) {
             throw new IllegalArgumentException("chatId não pode ser zero");
