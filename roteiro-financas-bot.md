@@ -160,26 +160,34 @@ Exemplo de dezembro de 2026: −salário curto e +13º como ajustes de renda, e 
 
 ## 6. Comandos
 
-| grupo | comando | o que faz | usa IA? |
-|---|---|---|---|
-| início | `/start` | cria o usuário como **pendente**; o admin aprova | não |
-| configuração | `/perfil` | renda, dia do salário | não |
-| | `/objetivo` | meta da reserva e aporte mensal | não |
-| | `/cartoes` | meios de pagamento, com fechamento e vencimento | não |
-| | `/recorrentes` | listar, cadastrar e cancelar recorrências | não |
-| | `/ajuste` | ajuste de renda ou de aporte num mês | não |
-| dia a dia | *texto livre* | registra um gasto | **sim** |
-| | `/gasto` | o mesmo, pela entrada explícita | **sim** |
-| | `/desfazer` | apaga a última compra e as parcelas dela | não |
-| consulta | `/disponivel` | quanto ainda dá para gastar no mês | não |
-| | `/resumo` | total do mês por categoria | não |
-| | `/extrato` | últimas compras | não |
-| | `/fatura` | quanto vai vir em cada cartão | não |
-| | `/ajuda` | lista os comandos | não |
+| grupo | comando | o que faz | usa IA? | situação |
+|---|---|---|---|---|
+| início | `/start` | cria o usuário como **pendente**; o admin aprova | não | ✅ |
+| configuração | `/perfil 2.500,00` | renda mensal (uma linha) | não | ✅ |
+| | `/objetivo` | conversa: [Aporte] [Meta] [Ambos] [Cancelar] → valor | não | ✅ |
+| | `/cartao` | conversa: nome → tipo → fechamento → vencimento | não | ✅ |
+| | `/recorrentes` | listar, cadastrar e cancelar recorrências | não | ⏳ |
+| | `/ajuste` | ajuste de renda ou de aporte num mês | não | ⏳ |
+| dia a dia | `/gasto` | conversa: descrição → valor → data → categoria → cartão → parcelas | não | 🔄 |
+| | *texto livre de gasto* | o Claude preenche o rascunho do `/gasto`; a conversa pergunta o que faltar | **sim** | ⏳ |
+| | *pergunta livre* | o Claude responde sobre os seus números, com tools de leitura | **sim** | ⏳ |
+| | `/desfazer` | apaga a última compra e as parcelas dela | não | ⏳ |
+| consulta | `/disponivel` | quanto ainda dá para gastar no mês | não | ✅ |
+| | `/resumo` | total do mês por categoria | não | ⏳ |
+| | `/extrato` | últimas compras | não | ⏳ |
+| | `/fatura` | quanto vai vir em cada cartão | não | ⏳ |
+| | `/ajuda` | lista os comandos, com botões | não | ✅ |
 
 Os comandos são registrados no @BotFather (`/setcommands`) para aparecer no menu.
 
-Os comandos de configuração são fluxos de várias perguntas. O passo em que cada usuário está fica salvo no banco (o **estado da conversa**), para sobreviver a um restart.
+### Como as conversas funcionam
+
+- **O estado** de cada usuário fica em `usuario.estado_conversa` (enum `EstadoConversa`), e diz *onde* a conversa está.
+- **O rascunho** (o que já foi respondido) fica em `usuario.contexto_conversa`, em JSON (Jackson), e é limpo no fim com `limpaContextoConversa`.
+- **O bot** escolhe quem responde por um `Map<EstadoConversa, Conversa>`, como faz com os comandos (`Map<String, Comando>`).
+- **Resposta inválida não muda o estado**; "Cancelar" volta ao `OCIOSO` de qualquer ponto.
+- **Os botões** são teclado de resposta (`ReplyKeyboardMarkup`): o toque chega como texto comum.
+- **Os comandos devolvem `Resposta(texto, botoes)`** e não sabem que o Telegram existe; quem converte é o bot.
 
 ---
 
@@ -210,87 +218,112 @@ Data de hoje: {DATA_ATUAL}  (fuso America/Sao_Paulo)
 
 ---
 
-## 8. Tools
+## 8. O Claude: dois papéis
 
-### `registrar_gasto`
+**Regra dos dois:** quem calcula é o Java. O Claude interpreta e explica; os números vêm prontos das tools.
+
+### Papel 1 — registrar um gasto a partir de uma frase
+
+O Claude transforma "pizza 62,90 no nubank" num `RascunhoGasto` (os mesmos campos da conversa do `/gasto`). O Java valida cada campo com as mesmas regras da conversa, grava o rascunho no `contexto_conversa` e muda o estado para a **primeira pergunta que faltar**. Daí em diante é a conversa normal do `/gasto`. Se nada faltar, salva direto.
+
 ```json
 {
-  "name": "registrar_gasto",
-  "description": "Registra uma compra do Bruno.",
+  "name": "preencher_gasto",
+  "description": "Extrai os campos de um gasto descrito pelo usuário.",
   "input_schema": {
     "type": "object",
     "properties": {
-      "descricao":      { "type": "string" },
-      "valor":          { "type": "number", "description": "valor total da compra" },
-      "meio_pagamento": { "type": "string", "enum": ["{MEIOS_DE_PAGAMENTO}"] },
-      "categoria":      { "type": "string", "enum": ["[categorias]"] },
-      "parcelas":       { "type": "integer", "minimum": 1, "description": "1 se à vista" },
-      "data":           { "type": "string", "description": "YYYY-MM-DD; hoje se não informado" }
+      "descricao":   { "type": "string" },
+      "valor":       { "type": "string", "description": "valor total, ex.: 62.90" },
+      "data_compra": { "type": "string", "description": "YYYY-MM-DD; hoje se não informado" },
+      "categoria":   { "type": "string", "enum": ["Alimentação", "Transporte", "Lazer", "Moradia", "Saúde", "Compras", "Outros"] },
+      "nome_meio":   { "type": "string", "enum": ["{CARTOES_DO_USUARIO}"] },
+      "parcelas":    { "type": "integer", "minimum": 1 }
     },
-    "required": ["descricao", "valor", "meio_pagamento", "categoria"]
+    "required": ["descricao"]
   }
 }
 ```
 
 Cuidados:
-- Os `enum` do schema ajudam o modelo, mas **a validação é do Java**: meio desconhecido, categoria desconhecida, valor ≤ 0 ou parcelas < 1 voltam como `tool_result` de erro.
-- `"valor": number` é lido pelo Jackson como `double` por padrão. Resolver isso antes de chegar ao `BigDecimal`.
-- A confirmação deve dizer em que fatura a compra caiu.
+- Só `descricao` é obrigatória: o que o Claude não souber fica de fora, e a conversa pergunta.
+- `valor` como **texto**, para não passar por `double` antes do `BigDecimal`.
+- Os `enum` do schema ajudam o modelo, mas **a validação é do Java**.
+- O `/gasto` manual continua existindo como plano B, se a API estiver fora do ar.
 
-### `consultar_gastos` (extra)
-Consultas em linguagem livre ("quanto gastei de iFood em outubro?"). As consultas comuns já são comandos. Se entrar, quem soma é o SQL e a tool devolve o total pronto.
+### Papel 2 — responder perguntas sobre os seus números
+
+> "Esse mês dá pra adiantar uma parcela do carro, uns 320 reais?"
+
+O Claude recebe **tools só de leitura** e decide quais chamar:
+
+| tool | devolve | usa |
+|---|---|---|
+| `consultar_disponivel(mes)` | o `ResumoMes` do mês | `DisponivelService` |
+| `simular_gasto(valor, mes)` | o disponível do mês com o gasto a mais | `DisponivelService` + conta no Java |
+| `consultar_gastos(mes, categoria?)` | totais por categoria/cartão | SQL com `SUM`/`GROUP BY` |
+
+O Claude nunca grava nada neste papel. A projeção de meses futuros só fica completa depois das **recorrências** (carro, TIM, assinaturas).
+
+Os números enviados nas tools vão para a API da Anthropic junto com a pergunta.
 
 ---
 
 ## 9. Etapas de construção
 
-### Etapa 1 — Bot eco, só para mim
+### Etapa 1 — Bot eco, só para mim ✅
 - **Meta:** o bot devolve exatamente o que recebe, e só para o meu chat ID.
 - **Conceitos:** Maven e dependências, criar o bot no @BotFather, long polling, variáveis de ambiente.
 - **Antes de começar:** acertar o `pom.xml` (`maven.compiler.release` 21, `groupId` do projeto).
 - **Pronto quando:** mando "oi" e recebo "oi"; outra conta é ignorada.
 
-### Etapa 2 — Domínio e regra de fatura (sem banco)
+### Etapa 2 — Domínio e regra de fatura (sem banco) ✅
 - **Meta:** records e enums do domínio e a `CalculadoraDeFatura`, que recebe data, meio, valor e parcelas e devolve a lista de parcelas.
 - **Conceitos:** records, enums com campos e métodos (diferença para o C#), `BigDecimal` e `RoundingMode`, `LocalDate`, `YearMonth`, JUnit 5.
 - **Pronto quando:** os testes passam para: compra antes, no dia e depois do fechamento; vencimento no mês seguinte ao fechamento; virada de ano; fechamento dia 30/31 em fevereiro; parcelamento com centavo sobrando; Pix numa parcela só.
 
-### Etapa 3 — Banco
+### Etapa 3 — Banco ✅
 - **Meta:** as seis tabelas no Supabase e os repositórios, como interfaces com implementação Postgres e implementação em memória.
 - **Antes de começar:** criar o projeto no Supabase e confirmar como a máquina conecta: direto (IPv6) ou pelo pooler (IPv4). Vale para o WSL agora e para o bspnode na Etapa 8.
 - **Conceitos:** JDBC e driver do PostgreSQL, `PreparedStatement`, try-with-resources, `NUMERIC` para dinheiro, `DATE`, chaves estrangeiras, `CHECK`, unicidade, `INSERT ... ON CONFLICT DO NOTHING`, `SUM` com mês vazio, transação (compra + parcelas gravam juntas ou nada grava).
 - **Testes:** a lógica testa contra a implementação em memória. Testar a implementação Postgres exige um banco de verdade (Testcontainers ou um projeto de teste): decidir aqui.
 - **Pronto quando:** testes salvam e leem compras com parcelas, e gerar as recorrências duas vezes dá o mesmo resultado.
 
-### Etapa 4 — Usuários, comandos e estado da conversa (sem IA)
-- **Meta:** `/start` com aprovação, `/perfil`, `/objetivo`, `/cartoes`, `/recorrentes`, `/ajuste`.
-- **Conceitos:** interface `Comando` + `Map`, padrão State, estado persistido no banco.
-- **Pronto quando:** consigo me cadastrar inteiro pelo Telegram, reinicio o bot no meio de um cadastro e ele continua de onde parou.
+### Etapa 4 — Usuários, comandos e conversas (sem IA) 🔄
+- **Feito:** interface `Comando` + `Map`, `Resposta` com botões, `/start` com aprovação, acesso pela tabela `usuario`, `/disponivel`, `/perfil`, `/ajuda`, a conversa do `/objetivo` e a do `/cartao` (estado + rascunho em JSON + `Map<EstadoConversa, Conversa>`).
+- **Falta:** a conversa do `/gasto`: sete estados `GASTO_*`, `RascunhoGasto` (com o módulo `jackson-datatype-jsr310` para o `LocalDate`), botões dos cartões vindos do banco (Streams), busca do id do cartão pelo nome, e no fim `parcelar` + `CompraRepository.salvar`.
+- **Pronto quando:** registro uma compra parcelada no crédito e uma no Pix pelo Telegram, e o `/disponivel` muda de acordo.
 
-### Etapa 5 — Consultas
-- **Meta:** `/disponivel`, `/resumo`, `/extrato`, `/fatura` e `/desfazer`, com compras lançadas por um comando provisório.
-- **Conceitos:** agregação no SQL (`SUM`, `GROUP BY`), Streams para formatar, geração sob demanda das recorrências.
-- **Pronto quando:** o `/disponivel` de dezembro de 2026 bate com a conta feita à mão, incluindo o salário curto e o 13º.
+### Etapa 5 — Recorrências e consultas
+- **Meta:** recorrências virando compras de cada mês (geração sob demanda, idempotente), `/recorrentes`, `/ajuste`, `/resumo`, `/extrato`, `/fatura` e `/desfazer`.
+- **Conceitos:** `INSERT ... ON CONFLICT DO NOTHING`, agregação no SQL (`SUM`, `GROUP BY`), Streams para formatar.
+- **Pronto quando:** o `/disponivel` de dezembro de 2026 bate com a conta feita à mão, incluindo as contas fixas, o salário curto e o 13º.
 
 ### Etapa 6 — Claude sem tools
-- **Meta:** `ClaudeService.responder(String)` devolve o texto do Claude e o bot repassa.
+- **Meta:** `ClaudeService.responder(String)` devolve o texto do Claude e o bot repassa (no lugar do "Digite um comando válido").
 - **Conceitos:** cliente HTTP do SDK, builder pattern, system prompt, tratamento de exceções.
 - **Opcional:** fazer a primeira chamada com `java.net.http.HttpClient` + Jackson, para ver o JSON cru antes do SDK.
 - **Pronto quando:** pergunto algo no Telegram e o Claude responde.
 
-### Etapa 7 — Tool `registrar_gasto` ⭐
-- **Meta:** o Claude chama a tool, o Java valida e grava, o Claude confirma. Quando falta informação, o bot pergunta e completa com a resposta.
-- **Conceitos:** interface `Tool`, loop de mensagens (`tool_use` → `tool_result`), desserializar JSON com Jackson, validação, `tool_result` de erro.
-- **Pronto quando:** "Comprei pipoca no cartão nubank: 5,50" grava uma compra e uma parcela na fatura certa; "pipoca 5,50" faz o bot perguntar o meio de pagamento e gravar depois da resposta.
+### Etapa 7 — O Claude preenche o gasto ⭐
+- **Meta:** papel 1 da seção 8. A frase vira um `RascunhoGasto`, e a conversa do `/gasto` pergunta o que faltar.
+- **Conceitos:** tool use, loop de mensagens (`tool_use` → `tool_result`), Jackson, validação, `tool_result` de erro.
+- **Pronto quando:** "comprei uma pizza de 62,90 no nubank" pergunta só as parcelas e grava; "uber 23,50" pergunta o cartão e grava.
+
+### Etapa 7b — O Claude responde sobre os números
+- **Meta:** papel 2 da seção 8, com as tools de leitura.
+- **Pronto quando:** "dá pra adiantar 320 da parcela do carro este mês?" responde com os números do `DisponivelService`, e nenhuma conta é feita pelo modelo.
 
 ### Etapa 8 — Robustez e deploy no bspnode
 - **Meta:** erros não derrubam o bot, e ele roda 24/7 no bspnode.
-- **Conceitos:** logging (SLF4J), falhas e timeouts da API e do banco, pool de conexões, Docker, limite de heap (`-Xmx`) para não competir com a coleta do mazetick.
+- **Já feito:** pool de conexões (HikariCP), rede de segurança `catch (RuntimeException e)` no `processar`.
+- **Conceitos:** logging (SLF4J com um provider de verdade: hoje os erros da biblioteca do Telegram vão para lugar nenhum), falhas e timeouts da API e do banco, Docker, limite de heap (`-Xmx`) para não competir com a coleta do mazetick.
 - **Cuidado com o Supabase free:** o projeto é pausado depois de uma semana sem atividade.
 - **Pronto quando:** a API do Claude fora do ar não derruba o bot (os comandos continuam funcionando), o banco fora do ar gera uma resposta clara em vez de um erro mudo, e o bot sobe sozinho depois de um restart da máquina.
 
 ### Extras (depois)
-- Tool `consultar_gastos` para perguntas livres.
+- Botões na mensagem (`InlineKeyboardMarkup`, com callback) no lugar do teclado de resposta.
+- Dia do salário como "N-ésimo dia útil" (hoje: 6º dia útil), para avisos de débito antes do salário.
 - `/objetivo` mostrando quanto falta para a meta da reserva.
 - Testes com Mockito nas tools.
 
@@ -302,15 +335,24 @@ Consultas em linguagem livre ("quanto gastei de iFood em outubro?"). As consulta
 - Banco no Supabase na nuvem, não no Supabase self-hosted do mazeserver, que cai e é descartável.
 - O bot pode perguntar o que faltar. A garantia vem da validação no Java, não do prompt.
 - O bot tem usuários, mesmo que só eu use. Usuário novo nasce pendente.
-- Só o registro de gasto usa IA. Comandos e consultas são Java puro.
+- O Claude tem dois papéis: preencher o rascunho de um gasto a partir de uma frase, e responder perguntas sobre os números com tools só de leitura. Comandos e conversas são Java puro.
 - Haiku como modelo, por custo e velocidade.
 - Dinheiro sempre em `BigDecimal`. Quem soma é o SQL, nunca o modelo.
 - Mês da fatura, fatura identificada pelo vencimento, compra no dia do fechamento vai para a seguinte.
 - Recorrências para assinaturas e débitos automáticos; renda no perfil; ajustes de renda e de aporte numa tabela só.
 - Roda no bspnode, não no mazeserver.
+- Supabase em us-west-2, mantido; pool de conexões resolve o custo de abrir conexão (~1,4 s → ~0,2 s por consulta).
+- O centavo que sobra na divisão é distribuído, 1 centavo para cada uma das primeiras parcelas.
+- Mês (`YearMonth`) gravado como `DATE` no dia 1; dinheiro em `NUMERIC(12,2)`; tudo no schema `financas`.
+- Comandos de configuração e o `/gasto` são conversas (máquina de estados no banco). O rascunho de cada conversa vai em JSON no `contexto_conversa`.
+- No `/objetivo`, a opção "Ambos" substitui a pergunta "quer atualizar o outro também?".
+- Teclado de resposta antes dos botões na mensagem.
+- `/gasto` pergunta "fez a compra hoje?" (Sim/Não → data); categorias fixas: Alimentação, Transporte, Lazer, Moradia, Saúde, Compras, Outros; parcelas por botão (1x/2x/3x/6x/10x/12x) ou digitadas.
 
 ## 11. Em aberto
 
-- **Contexto da pergunta pendente:** quando o bot pergunta "qual cartão?", a resposta chega numa mensagem nova. Como guardar as mensagens daquele registro até ele ser gravado ou expirar? Decidir na Etapa 7.
-- Regra do centavo na divisão das parcelas.
-- O perfil fica em colunas de `usuario` ou numa tabela própria?
+- **Testes da camada de banco:** hoje só a lógica pura e os caminhos de erro dos comandos têm JUnit. Testar repositórios exige um banco de verdade (Testcontainers ou um projeto de teste).
+- **Conexão do bspnode ao Supabase:** direta (IPv6) ou pelo pooler (IPv4). Confirmar na Etapa 8.
+- **Cartão com nome repetido:** o `UNIQUE (usuario_id, nome)` gera uma `SQLException` genérica; avisar logo no primeiro passo do `/cartao`.
+
+Resolvidos: o contexto da pergunta pendente (rascunho em JSON no `contexto_conversa`), a regra do centavo (distribuído) e o perfil (colunas de `usuario`).

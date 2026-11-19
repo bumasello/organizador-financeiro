@@ -16,6 +16,7 @@
     <telegrambots.version>10.3.0</telegrambots.version>
     <postgresql.version>42.7.14</postgresql.version>
     <hikari.version>7.1.0</hikari.version>
+    <jackson.version>2.23.0</jackson.version>
   </properties>
 
   <dependencyManagement>
@@ -32,9 +33,15 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.23.0</version>
+      <version>${jackson.version}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
