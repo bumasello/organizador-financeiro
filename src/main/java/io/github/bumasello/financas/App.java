@@ -12,12 +12,14 @@ import io.github.bumasello.financas.comandos.AjudaComando;
 import io.github.bumasello.financas.comandos.CartaoComando;
 import io.github.bumasello.financas.comandos.Comando;
 import io.github.bumasello.financas.comandos.DisponivelComando;
+import io.github.bumasello.financas.comandos.GastoComando;
 import io.github.bumasello.financas.comandos.ObjetivoComando;
 import io.github.bumasello.financas.comandos.PerfilComando;
 import io.github.bumasello.financas.comandos.StartComando;
 import io.github.bumasello.financas.config.Settings;
 import io.github.bumasello.financas.conversa.Conversa;
 import io.github.bumasello.financas.conversa.ConversaCartao;
+import io.github.bumasello.financas.conversa.ConversaGasto;
 import io.github.bumasello.financas.conversa.ConversaObjetivo;
 import io.github.bumasello.financas.domain.EstadoConversa;
 import io.github.bumasello.financas.repo.AjusteRepository;
@@ -43,6 +45,7 @@ public class App {
         TelegramBotsLongPollingApplication bot = new TelegramBotsLongPollingApplication();
         UsuarioRepository usuarioRepository = new UsuarioRepository(database);
         MeioPagamentoRepository meioPagamentoRepository = new MeioPagamentoRepository(database);
+        CompraRepository compraRepository = new CompraRepository(database);
 
         DisponivelService disponivelService = new DisponivelService(usuarioRepository,
                 new CompraRepository(database), new AjusteRepository(database));
@@ -53,21 +56,30 @@ public class App {
                 new ObjetivoComando(usuarioRepository),
                 "/start",
                 new StartComando(usuarioRepository),
+                "/gasto", new GastoComando(usuarioRepository),
                 "/cartao", new CartaoComando(usuarioRepository),
                 "/ajuda", new AjudaComando());
 
         ConversaObjetivo conversaObjetivo = new ConversaObjetivo(usuarioRepository);
         ConversaCartao conversaCartao = new ConversaCartao(meioPagamentoRepository, usuarioRepository);
+        ConversaGasto conversaGasto = new ConversaGasto(usuarioRepository, meioPagamentoRepository, compraRepository);
 
-        Map<EstadoConversa, Conversa> conversas = Map.of(
-                EstadoConversa.ESCOLHENDO_OBJETIVO, conversaObjetivo,
-                EstadoConversa.AGUARDANDO_APORTE, conversaObjetivo,
-                EstadoConversa.AGUARDANDO_META, conversaObjetivo,
-                EstadoConversa.AGUARDANDO_APORTE_DOS_DOIS, conversaObjetivo,
-                EstadoConversa.ESCOLHENDO_CARTAO, conversaCartao,
-                EstadoConversa.ESCOLHENDO_TIPO_PAGAMENTO, conversaCartao,
-                EstadoConversa.ESCOLHENDO_DIA_FECHAMENTO, conversaCartao,
-                EstadoConversa.ESCOLHENDO_DIA_VENCIMENTO, conversaCartao);
+        Map<EstadoConversa, Conversa> conversas = Map.ofEntries(
+                Map.entry(EstadoConversa.ESCOLHENDO_OBJETIVO, conversaObjetivo),
+                Map.entry(EstadoConversa.AGUARDANDO_APORTE, conversaObjetivo),
+                Map.entry(EstadoConversa.AGUARDANDO_META, conversaObjetivo),
+                Map.entry(EstadoConversa.AGUARDANDO_APORTE_DOS_DOIS, conversaObjetivo),
+                Map.entry(EstadoConversa.ESCOLHENDO_CARTAO, conversaCartao),
+                Map.entry(EstadoConversa.ESCOLHENDO_TIPO_PAGAMENTO, conversaCartao),
+                Map.entry(EstadoConversa.ESCOLHENDO_DIA_FECHAMENTO, conversaCartao),
+                Map.entry(EstadoConversa.ESCOLHENDO_DIA_VENCIMENTO, conversaCartao),
+                Map.entry(EstadoConversa.GASTO_DESCRICAO, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_DATA, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_MEIO, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_VALOR, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_PARCELAS, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_CATEGORIA, conversaGasto),
+                Map.entry(EstadoConversa.GASTO_DATA_HOJE, conversaGasto));
 
         bot.registerBot(token,
                 new FinancasBot(client, usuarioRepository, comandos,

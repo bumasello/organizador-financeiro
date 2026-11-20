@@ -6,6 +6,7 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -32,7 +33,8 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
     private static final ZoneId FUSO_SAO_PAULO = ZoneId.of("America/Sao_Paulo");
     private static final List<String> CATEGORIAS = List.of("Alimentação", "Transporte", "Lazer", "Moradia", "Saúde",
             "Compras", "Outros");
-    private static final DateTimeFormatter FORMATADOR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FORMATADOR = DateTimeFormatter.ofPattern("d/M/uuuu")
+            .withResolverStyle(ResolverStyle.STRICT);
     private final MeioPagamentoRepository meioPagamentoRepository;
     private final CompraRepository compraRepository;
 
@@ -206,10 +208,12 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
                     Optional<String> categoriaVerificada = CATEGORIAS.stream()
                             .filter(m -> m.equalsIgnoreCase(categoria)).findFirst();
 
-                    if (categoriaVerificada == null) {
+                    if (categoriaVerificada.isEmpty()) {
                         return new Resposta(
                                 "Por favor, selecione uma categoria válida.", CATEGORIAS);
                     }
+
+                    String categoriaFormatada = categoriaVerificada.get();
 
                     try {
 
@@ -231,7 +235,7 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
                                 rascunhoGasto.descricao(),
                                 rascunhoGasto.valor(),
                                 rascunhoGasto.data(),
-                                categoria,
+                                categoriaFormatada,
                                 null);
 
                         this.gravarRascunho(chatId, novoRascunhoGasto);
@@ -288,6 +292,10 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
 
                     List<MeioPagamento> meios = this.meioPagamentoRepository.buscaPorUsuario(usuario.id());
 
+                    if (meios.isEmpty()) {
+                        return new Resposta("Digite /carta para registrar um novo meio de pagamento.");
+                    }
+
                     List<String> nomes = meios.stream().map(MeioPagamento::nome).toList();
 
                     Optional<MeioPagamento> optionalMeio = meios.stream()
@@ -323,27 +331,7 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
                                 meio.nome());
 
                         if (meio.tipo() == TipoPagamento.IMEDIATO) {
-                            // não tem como não existir, pois já foi procurado anteriormente
-                            Optional<Long> optionalMeioSalvo = this.meioPagamentoRepository.buscaIdPorNome(
-                                    usuario.id(),
-                                    meio.nome().toLowerCase(Locale.ROOT));
-
-                            if (optionalMeioSalvo.isEmpty()) {
-                                throw new IllegalStateException("Meio de pagamento não encontrado: " + meio.nome());
-                            }
-
-                            Long meioSalvo = optionalMeioSalvo.get();
-
-                            Compra compra = new Compra(novoRascunhoGasto.data(), novoRascunhoGasto.descricao(),
-                                    novoRascunhoGasto.categoria(), novoRascunhoGasto.valor(), 1);
-
-                            List<Parcela> parcelas = CalculadoraFatura.parcelar(meio, novoRascunhoGasto.data(),
-                                    novoRascunhoGasto.valor(), 1);
-
-                            this.compraRepository.salvar(usuario.id(), meioSalvo, compra, parcelas);
-                            this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                            this.usuarioRepository.limpaContextoConversa(chatId);
-                            return new Resposta("Gasto registrado com sucesso!");
+                            return this.salvarGasto(chatId, usuario.id(), meio, novoRascunhoGasto, 1);
                         }
 
                         this.gravarRascunho(chatId, novoRascunhoGasto);
@@ -387,8 +375,6 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
 
                         List<MeioPagamento> meios = this.meioPagamentoRepository.buscaPorUsuario(usuario.id());
 
-                        List<String> nomes = meios.stream().map(MeioPagamento::nome).toList();
-
                         Optional<RascunhoGasto> optionalRascunho = this.lerRascunho(chatId);
 
                         if (optionalRascunho.isEmpty()) {
@@ -404,35 +390,16 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
                         RascunhoGasto rascunhoGasto = optionalRascunho.get();
 
                         Optional<MeioPagamento> optionalMeio = meios.stream()
-                                .filter(m -> m.nome().equalsIgnoreCase(rascunhoGasto.nomeMeio()))
-                                .findFirst();
+                                .filter(m -> m.nome().equalsIgnoreCase(rascunhoGasto.nomeMeio())).findFirst();
 
                         if (optionalMeio.isEmpty()) {
-                            return new Resposta("Pode selecionar o cartão novamente?", nomes);
-                        }
+                            return new Resposta(
+                                    "Não encontrei seu meio de pagamento. Digite /cartao para cadastrar um novo.");
 
+                        }
                         MeioPagamento meio = optionalMeio.get();
 
-                        Optional<Long> optionalMeioSalvo = this.meioPagamentoRepository.buscaIdPorNome(
-                                usuario.id(),
-                                meio.nome().toLowerCase(Locale.ROOT));
-
-                        if (optionalMeioSalvo.isEmpty()) {
-                            throw new IllegalStateException("Meio de pagamento não encontrado: " + meio.nome());
-                        }
-
-                        Long meioSalvo = optionalMeioSalvo.get();
-
-                        Compra compra = new Compra(rascunhoGasto.data(), rascunhoGasto.descricao(),
-                                rascunhoGasto.categoria(), rascunhoGasto.valor(), numeroParcelas);
-
-                        List<Parcela> parcelas = CalculadoraFatura.parcelar(meio, rascunhoGasto.data(),
-                                rascunhoGasto.valor(), numeroParcelas);
-
-                        this.compraRepository.salvar(usuario.id(), meioSalvo, compra, parcelas);
-                        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
-                        this.usuarioRepository.limpaContextoConversa(chatId);
-                        return new Resposta("Gasto registrado com sucesso!");
+                        return this.salvarGasto(chatId, usuario.id(), meio, rascunhoGasto, numeroParcelas);
                     } catch (JsonProcessingException e) {
                         return new Resposta(
                                 "Não consegui entender o valor digitado. Pode digitar novamente?");
@@ -448,6 +415,29 @@ public class ConversaGasto extends ConversaComRascunho<RascunhoGasto> {
             e.printStackTrace();
             return new Resposta("Não consigo continuar agora. Tente novamente mais tarde!");
         }
+    }
+
+    private Resposta salvarGasto(long chatId, long usuarioId, MeioPagamento meio, RascunhoGasto rascunho,
+            int quantidadeParcelas)
+            throws SQLException {
+        Optional<Long> optionalMeioSalvo = this.meioPagamentoRepository.buscaIdPorNome(usuarioId, meio.nome());
+
+        if (optionalMeioSalvo.isEmpty()) {
+            throw new IllegalStateException("Meio de pagamento não encontrado: " + meio.nome());
+        }
+
+        Long meioSalvo = optionalMeioSalvo.get();
+
+        Compra compra = new Compra(rascunho.data(), rascunho.descricao(), rascunho.categoria(), rascunho.valor(),
+                quantidadeParcelas);
+
+        List<Parcela> parcelas = CalculadoraFatura.parcelar(meio, rascunho.data(), rascunho.valor(),
+                quantidadeParcelas);
+
+        this.compraRepository.salvar(usuarioId, meioSalvo, compra, parcelas);
+        this.usuarioRepository.atualizaEstado(chatId, EstadoConversa.OCIOSO);
+        this.usuarioRepository.limpaContextoConversa(chatId);
+        return new Resposta("Gasto registrado com sucesso!");
     }
 
 }
