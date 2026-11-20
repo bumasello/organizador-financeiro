@@ -347,7 +347,7 @@ Os números enviados nas tools vão para a API da Anthropic junto com a pergunta
 - Comandos de configuração e o `/gasto` são conversas (máquina de estados no banco). O rascunho de cada conversa vai em JSON no `contexto_conversa`.
 - No `/objetivo`, a opção "Ambos" substitui a pergunta "quer atualizar o outro também?".
 - Teclado de resposta antes dos botões na mensagem.
-- `/gasto` pergunta "fez a compra hoje?" (Sim/Não → data); categorias fixas: Alimentação, Transporte, Lazer, Moradia, Saúde, Compras, Outros; parcelas por botão (1x/2x/3x/6x/10x/12x) ou digitadas.
+- `/gasto` pergunta "fez a compra hoje?" (Sim/Não → data); categorias fixas: Alimentação, Transporte, Lazer, Moradia, Saúde, Compras, Outros; parcelas digitadas (sem botões, para cobrir compras como o carro em 48x).
 
 ## 11. Em aberto
 

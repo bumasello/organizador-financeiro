@@ -21,15 +21,46 @@ public class MeioPagamentoRepository {
         this.database = database;
     }
 
+    public Optional<Long> buscaIdPorNome(long usuarioId, String nome) throws SQLException {
+
+        if (usuarioId == 0) {
+            throw new IllegalArgumentException("usuarioId não pode ser zero ou negativo");
+        }
+
+        if (nome == null || nome.isBlank()) {
+            throw new IllegalArgumentException("nome não pode ser nulo ou vazio");
+        }
+
+        String sql = """
+                SELECT id
+                FROM meio_pagamento
+                WHERE usuario_id = ?
+                AND LOWER(nome) = LOWER(?)
+                """;
+
+        try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql);) {
+            pstmt.setLong(1, usuarioId);
+            pstmt.setString(2, nome);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getLong("id"));
+                }
+
+            }
+        }
+        return Optional.empty();
+    }
+
     public Optional<MeioPagamento> buscaPorId(long meioPagamentoId) throws SQLException {
         if (meioPagamentoId <= 0) {
             throw new IllegalArgumentException("meioPagamentoId não pode ser zero ou negativo");
         }
 
         String sql = """
-                        SELECT nome, tipo, dia_fechamento, dia_vencimento
-                        FROM meio_pagamento
-                        WHERE id = ?
+                SELECT nome, tipo, dia_fechamento, dia_vencimento
+                FROM meio_pagamento
+                WHERE id = ?
                 """;
 
         try (Connection conn = this.database.abrirConn(); PreparedStatement pstmt = conn.prepareStatement(sql)) {

@@ -2,10 +2,11 @@ package io.github.bumasello.financas.conversa;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.github.bumasello.financas.comandos.Resposta;
 import io.github.bumasello.financas.domain.EstadoConversa;
 import io.github.bumasello.financas.domain.MeioPagamento;
@@ -17,14 +18,12 @@ import io.github.bumasello.financas.repo.UsuarioRepository;
 /**
  * ConversaCartao
  */
-public class ConversaCartao implements Conversa {
+public class ConversaCartao extends ConversaComRascunho<RascunhoCartao> {
     private final MeioPagamentoRepository meioPagamentoRepository;
-    private final UsuarioRepository usuarioRepository;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public ConversaCartao(MeioPagamentoRepository meioPagamentoRepository, UsuarioRepository usuarioRepository) {
+        super(usuarioRepository, RascunhoCartao.class);
         this.meioPagamentoRepository = meioPagamentoRepository;
-        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -49,6 +48,23 @@ public class ConversaCartao implements Conversa {
                         String nomeCartao = texto.strip();
 
                         try {
+
+                            Optional<Usuario> optionalUsuario = this.usuarioRepository.buscaPorChatId(chatId);
+
+                            if (optionalUsuario.isEmpty()) {
+                                return new Resposta("Usuário não encontrado. Digite /start para se cadastrar.");
+                            }
+
+                            Usuario usuario = optionalUsuario.get();
+
+                            Optional<Long> optionalMeioSalvo = this.meioPagamentoRepository.buscaIdPorNome(usuario.id(),
+                                    nomeCartao.toLowerCase(Locale.ROOT));
+
+                            if (optionalMeioSalvo.isPresent()) {
+                                return new Resposta(
+                                        "Já existe um cartão cadastrado com esse nome. Por favor, digite outro!");
+                            }
+
                             RascunhoCartao rascunhoCartao = new RascunhoCartao(nomeCartao, null, null, null);
                             this.gravarRascunho(chatId, rascunhoCartao);
 
@@ -237,27 +253,6 @@ public class ConversaCartao implements Conversa {
             e.printStackTrace();
             return new Resposta("Não consigo continuar agora. Tente novamente mais tarde!");
         }
-    }
-
-    private Optional<RascunhoCartao> lerRascunho(long chatId) throws JsonProcessingException, SQLException {
-
-        Optional<String> optionalRascunho = this.usuarioRepository.buscaContextoPorChatId(chatId);
-
-        if (optionalRascunho.isEmpty()) {
-            return Optional.empty();
-        }
-
-        String rascunho = optionalRascunho.get();
-        RascunhoCartao novoRascunho = MAPPER.readValue(rascunho, RascunhoCartao.class);
-
-        return Optional.of(novoRascunho);
-    }
-
-    private void gravarRascunho(long chatId, RascunhoCartao rascunho) throws JsonProcessingException, SQLException {
-
-        String rascunhoString = MAPPER.writeValueAsString(rascunho);
-        this.usuarioRepository.atualizaContextoConversa(chatId, rascunhoString);
-
     }
 
 }
