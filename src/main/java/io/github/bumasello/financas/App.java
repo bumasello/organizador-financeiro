@@ -1,6 +1,8 @@
 package io.github.bumasello.financas;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.YearMonth;
 import java.util.Map;
 
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
@@ -22,10 +24,12 @@ import io.github.bumasello.financas.conversa.ConversaCartao;
 import io.github.bumasello.financas.conversa.ConversaGasto;
 import io.github.bumasello.financas.conversa.ConversaObjetivo;
 import io.github.bumasello.financas.domain.EstadoConversa;
+import io.github.bumasello.financas.domain.Recorrencia;
 import io.github.bumasello.financas.repo.AjusteRepository;
 import io.github.bumasello.financas.repo.CompraRepository;
 import io.github.bumasello.financas.repo.Database;
 import io.github.bumasello.financas.repo.MeioPagamentoRepository;
+import io.github.bumasello.financas.repo.RecorrenciaRepository;
 import io.github.bumasello.financas.repo.UsuarioRepository;
 import io.github.bumasello.financas.service.DisponivelService;
 import io.github.bumasello.financas.telegram.FinancasBot;
@@ -80,6 +84,18 @@ public class App {
                 Map.entry(EstadoConversa.GASTO_PARCELAS, conversaGasto),
                 Map.entry(EstadoConversa.GASTO_CATEGORIA, conversaGasto),
                 Map.entry(EstadoConversa.GASTO_DATA_HOJE, conversaGasto));
+
+        Recorrencia recorrencia = new Recorrencia("Teste", new BigDecimal("159.00"), "moradia", 15,
+                YearMonth.of(2026, 11), null);
+        Recorrencia recorrenciaNova = new Recorrencia("Teste2", new BigDecimal("159.00"), "moradia", 15,
+                YearMonth.of(2026, 11), YearMonth.of(2026, 12));
+
+        RecorrenciaRepository recorrenciaRepository = new RecorrenciaRepository(database);
+
+        // recorrenciaRepository.salvar(1, 1, recorrencia);
+        recorrenciaRepository.salvar(1, 1, recorrenciaNova);
+
+        System.out.println(recorrenciaRepository.listaPorUsuario(1));
 
         bot.registerBot(token,
                 new FinancasBot(client, usuarioRepository, comandos,
