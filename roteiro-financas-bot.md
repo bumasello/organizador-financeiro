@@ -135,6 +135,8 @@ FinancasBot ──► Telegram: "Anotado: R$ 5,50 no Nubank (Lazer), fatura de n
 Cuidados: cartão que fecha dia 30 ou 31 em fevereiro, e a divisão em `BigDecimal` (R$ 100 em 3x: para onde vai o centavo?).
 
 **Recorrências viram compras sob demanda, não por agendamento**
+- Gera até o **mês consultado**, mesmo que seja futuro. Por isso, cancelar preenche o mês de fim **e apaga** as compras geradas depois dele.
+- Cobrança no dia 31 em mês curto cai no último dia do mês.
 - Antes de qualquer consulta de um mês, gerar as compras que faltam das recorrências ativas até aquele mês. Se o bot ficar fora do ar, ele se atualiza na primeira consulta.
 - Gerar tem que ser **idempotente**: uma restrição de unicidade sobre (recorrência, mês) garante isso no banco.
 - Compra gerada é histórico: mudar o valor da recorrência só afeta o futuro.
@@ -168,7 +170,7 @@ Exemplo de dezembro de 2026: −salário curto e +13º como ajustes de renda, e 
 | | `/cartao` | conversa: nome → tipo → fechamento → vencimento | não | ✅ |
 | | `/recorrentes` | listar, cadastrar e cancelar recorrências | não | ⏳ |
 | | `/ajuste` | ajuste de renda ou de aporte num mês | não | ⏳ |
-| dia a dia | `/gasto` | conversa: descrição → valor → data → categoria → cartão → parcelas | não | 🔄 |
+| dia a dia | `/gasto` | conversa: descrição → valor → data → categoria → cartão → parcelas | não | ✅ |
 | | *texto livre de gasto* | o Claude preenche o rascunho do `/gasto`; a conversa pergunta o que faltar | **sim** | ⏳ |
 | | *pergunta livre* | o Claude responde sobre os seus números, com tools de leitura | **sim** | ⏳ |
 | | `/desfazer` | apaga a última compra e as parcelas dela | não | ⏳ |
@@ -289,9 +291,9 @@ Os números enviados nas tools vão para a API da Anthropic junto com a pergunta
 - **Testes:** a lógica testa contra a implementação em memória. Testar a implementação Postgres exige um banco de verdade (Testcontainers ou um projeto de teste): decidir aqui.
 - **Pronto quando:** testes salvam e leem compras com parcelas, e gerar as recorrências duas vezes dá o mesmo resultado.
 
-### Etapa 4 — Usuários, comandos e conversas (sem IA) 🔄
+### Etapa 4 — Usuários, comandos e conversas (sem IA) ✅
 - **Feito:** interface `Comando` + `Map`, `Resposta` com botões, `/start` com aprovação, acesso pela tabela `usuario`, `/disponivel`, `/perfil`, `/ajuda`, a conversa do `/objetivo` e a do `/cartao` (estado + rascunho em JSON + `Map<EstadoConversa, Conversa>`).
-- **Falta:** a conversa do `/gasto`: sete estados `GASTO_*`, `RascunhoGasto` (com o módulo `jackson-datatype-jsr310` para o `LocalDate`), botões dos cartões vindos do banco (Streams), busca do id do cartão pelo nome, e no fim `parcelar` + `CompraRepository.salvar`.
+- **Também feito (20/11/2026):** a conversa do `/gasto` (sete estados `GASTO_*`, `RascunhoGasto` com `jackson-datatype-jsr310`, cartões como botões via Stream, `buscaIdPorNome`, `salvarGasto` com `parcelar` + `CompraRepository.salvar`), a classe mãe `ConversaComRascunho<T>` e o `Map.ofEntries` para o mapa de conversas.
 - **Pronto quando:** registro uma compra parcelada no crédito e uma no Pix pelo Telegram, e o `/disponivel` muda de acordo.
 
 ### Etapa 5 — Recorrências e consultas
